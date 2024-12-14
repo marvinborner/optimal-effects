@@ -1,0 +1,58 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.37.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           opteff
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/marvinborner/opteff#readme>
+homepage:       https://github.com/marvinborner/opteff#readme
+bug-reports:    https://github.com/marvinborner/opteff/issues
+author:         Marvin Borner
+maintainer:     develop@marvinborner.de
+copyright:      2024 Marvin Borner
+license:        MIT
+build-type:     Simple
+extra-source-files:
+    readme.md
+
+source-repository head
+  type: git
+  location: https://github.com/marvinborner/opteff
+
+library
+  exposed-modules:
+      Data.Core
+      Language.Core.Parser
+      Language.Core.Reducer
+  other-modules:
+      Paths_opteff
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+    , megaparsec
+    , mtl
+    , optparse-applicative
+    , text
+    , unordered-containers
+  default-language: Haskell2010
+
+executable opteff-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_opteff
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , megaparsec
+    , mtl
+    , opteff
+    , optparse-applicative
+    , text
+    , unordered-containers
+  default-language: Haskell2010
