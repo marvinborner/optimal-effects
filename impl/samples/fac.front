@@ -1,3 +1,26 @@
+true t f = t
+false t f = f
+
+id x = x
+const x u = x
+
+isZero a = a (const false) true
+
+pred n f x = (
+  extract k = k id
+  inc g h = h (g f)
+  const u = x
+  extract (n inc const)
+)
+
+a (-) b = a pred b
+
+-- TODO: <
+a (<=) b =
+  if (isZero a) true
+  else if (isZero b) false
+  else ((a - 1) <= (b - 1))
+
 fac n =
   if (n <= 0) n
   else (

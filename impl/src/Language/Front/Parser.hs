@@ -13,7 +13,7 @@ import           Data.Front                     ( Action(..)
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Void
-import           Text.Megaparsec         hiding ( State )
+import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
 
@@ -27,27 +27,33 @@ lineComment = L.skipLineComment "--"
 blockComment :: Parser ()
 blockComment = L.skipBlockComment "{-" "-}"
 
+-- | space consumer including comments and newlines
+scn :: Parser ()
+scn = L.space space1 lineComment blockComment
+
+-- | space consumer including comments without newlines
+sc :: Parser ()
+sc = L.space (void $ some (oneOf (" \t" :: String))) lineComment blockComment
+
+-- | parenthesized parser allowing newlines: ( <a> )
 parens :: Parser a -> Parser a
-parens = between (symbol "(") (symbol ")")
+parens = between (symbol "(" <* scn) (scn *> symbol ")")
 
--- | space consumer including comments
-spaceConsumer :: String -> Parser ()
-spaceConsumer s = L.space (void $ oneOf s) lineComment blockComment
+-- | lexeme consumer without newline
+lexeme :: Parser a -> Parser a
+lexeme = L.lexeme sc
 
--- | multiple spaces with comments
-spaces :: Parser ()
-spaces = spaceConsumer (" \t" :: String)
+-- | lexeme consumer with newline
+lexemeN :: Parser a -> Parser a
+lexemeN = L.lexeme scn
 
--- | multiple spaces and newlines with comments
-anySpaces :: Parser ()
-anySpaces = spaceConsumer (" \t\r\n" :: String)
-
-seperator :: Parser ()
-seperator = (some (oneOf (";\r\n" :: String)) <* anySpaces) >> pure ()
-
--- | symbol consumer with arbitrary spaces behind
+-- | symbol consumer without newline
 symbol :: Text -> Parser Text
-symbol t = string t <* anySpaces
+symbol = L.symbol sc
+
+-- | symbol consumer with newline
+symbolN :: Text -> Parser Text
+symbolN = L.symbol scn
 
 -- | single identifier, a-z
 identifier :: Parser Text
@@ -55,29 +61,25 @@ identifier = T.pack <$> some (lowerChar <|> upperChar)
 
 -- | single mixfix operator
 operator :: Parser Text
-operator = T.pack <$> some (oneOf ("+-*/<>=" :: String))
+operator = T.pack <$> some (oneOf ("+-*/<>=?!" :: String))
 
 -- | infix function: <singleton> <operator> <singleton>
 -- TODO: make mixier
 mixfix :: Parser Term
 mixfix = do
-  l  <- singleton
-  _  <- spaces
-  op <- operator
-  _  <- spaces
-  r  <- singleton
+  l  <- lexeme singleton
+  op <- lexeme operator
+  r  <- lexeme singleton
   return $ Mixfix op l r
 
 -- | if expression: if (<term>) <term> else <term>
 ifElse :: Parser Term
 ifElse = do
   _      <- symbol "if"
-  clause <- parens term
-  _      <- anySpaces
-  true   <- term
-  _      <- anySpaces
+  clause <- lexeme $ parens term
+  true   <- lexemeN singleton
   _      <- symbol "else"
-  false  <- term
+  false  <- lexeme singleton
   return $ If clause true false
 
 -- | do action: bind | unit
@@ -87,70 +89,69 @@ doAction :: Parser Action
 doAction = try bind <|> unit
  where
   bind = do
-    name <- identifier
-    _    <- spaces
+    name <- lexeme identifier
     _    <- symbol "<-"
-    t    <- term
+    t    <- lexemeN term
     return $ Bind name t
-  unit = Unit <$> term
+  unit = Unit <$> lexemeN term
 
 -- | do block: do ( <doAction>+ )
 doBlock :: Parser Term
 doBlock = do
   _       <- symbol "do"
-  actions <- parens $ doAction `sepEndBy1` seperator
+  actions <- lexeme $ parens $ some doAction
   return $ Do actions
 
 -- | single decimal number
 number :: Parser Term
-number = Num <$> L.decimal
+number = Num <$> lexeme L.decimal
 
 -- | single identifier (function / parameter binding)
 var :: Parser Term
-var = Var <$> identifier
+var = Var <$> lexeme identifier
 
 singleton :: Parser Term
 singleton = ifElse <|> doBlock <|> number <|> var <|> parens block
 
 -- | single term, potentially a left application fold of many
 term :: Parser Term
-term = try chain <|> once
- where
-  once  = try mixfix <|> singleton
-  chain = foldl1 App <$> sepEndBy1 (try once) (char ' ')
+term = foldl1 App <$> some (lexeme $ try mixfix <|> singleton)
+
+mixDefinition :: Parser Term
+mixDefinition = do
+  l    <- lexeme identifier
+  op   <- lexeme (parens operator)
+  r    <- lexeme identifier
+  _    <- symbolN "="
+  body <- lexemeN term
+  return $ Definition op [l, r] body
 
 -- | single definition: <identifier> <identifier>* = <term>
 definition :: Parser Term
 definition = do
-  _      <- anySpaces
-  name   <- identifier
-  _      <- spaces
-  params <- identifier `sepEndBy` spaces
-  _      <- symbol "="
-  body   <- term
+  name   <- lexeme identifier
+  params <- many $ lexeme identifier
+  _      <- symbolN "="
+  body   <- lexemeN term
   return $ Definition name params body
 
 -- | many definitions, seperated by newline or semicolon
 definitions :: Parser [Term]
-definitions = sepEndBy (try definition) seperator
+definitions = many (scn *> (try mixDefinition <|> try definition))
 
 -- | single "let..in" block: many definitions before a single term
 block :: Parser Term
 block = do
-  _  <- anySpaces
-  ds <- definitions
-  _  <- anySpaces
-  t  <- term
-  _  <- anySpaces
+  ds <- lexemeN definitions
+  t  <- lexemeN term
   return $ Block ds t
 
 -- TODO: add preprocessor commands?
 program :: Parser Term
-program = block
+program = lexeme block
 
 parseProgram :: Text -> Either String Term
-parseProgram s = prettify
-  $ runParser (anySpaces *> program <* anySpaces <* eof) "" s
+parseProgram s = prettify $ runParser (program <* eof) "" s
  where
   prettify (Right t  ) = Right t
   prettify (Left  err) = Left $ errorBundlePretty err
