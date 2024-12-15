@@ -1,0 +1,11 @@
+fac n =
+  if (n <= 0) n
+  else (
+    prev = fac (n - 1)
+    n * prev
+  )
+
+do (
+  n <- readInt
+  writeInt (fac n)
+)

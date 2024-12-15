@@ -6,10 +6,14 @@ module Main
   ( main
   ) where
 
-import           Data.Core                      ( Term(..) )
+import           Data.Core                     as Core
+                                                ( Term(..) )
+import           Data.Front                    as Front
+                                                ( Term(..) )
 import qualified Data.Text                     as T
-import           Language.Core.Parser           ( parseProgram )
 import           Language.Core.Reducer          ( nf )
+import           Language.Front.Parser         as Front
+                                                ( parseProgram )
 import           Options.Applicative            ( (<**>)
                                                 , Parser
                                                 , execParser
@@ -28,8 +32,9 @@ newtype Args = Args
 args :: Parser Args
 args = pure $ Args ArgEval
 
-pipeline :: T.Text -> Either String Term
-pipeline program = parseProgram program -- >>= linearity >>= typeCheck
+-- pipeline :: T.Text -> Either String Core.Term
+pipeline program = do
+  Front.parseProgram program
 
 actions :: Args -> IO ()
 actions Args { _argMode = ArgEval } = do
@@ -37,9 +42,9 @@ actions Args { _argMode = ArgEval } = do
   case pipeline (T.pack program) of
     Left err -> putStrLn err
     Right out ->
-      let term   = show out
-          normal = show $ nf out
-      in  putStrLn $ term <> "\n" <> normal
+      let term = show out
+          -- normal = show $ nf out
+      in  putStrLn $ term -- <> "\n" <> normal
 
 main :: IO ()
 main = execParser opts >>= actions

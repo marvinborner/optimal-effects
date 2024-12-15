@@ -24,8 +24,12 @@ source-repository head
 library
   exposed-modules:
       Data.Core
+      Data.Front
+      Data.Lambda
       Language.Core.Parser
       Language.Core.Reducer
+      Language.Front.Parser
+      Language.Lambda.Parser
   other-modules:
       Paths_opteff
   hs-source-dirs:

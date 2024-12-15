@@ -7,29 +7,17 @@ module Language.Front.Parser
   ) where
 
 import           Control.Monad                  ( void )
-import           Control.Monad.State
-import           Data.Front                     ( Nat(..)
+import           Data.Front                     ( Action(..)
                                                 , Term(..)
-                                                , shift
                                                 )
-import           Data.Functor                   ( ($>) )
-import           Data.HashMap.Strict            ( HashMap )
-import qualified Data.HashMap.Strict           as M
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Void
-import           Prelude                 hiding ( abs
-                                                , min
-                                                )
 import           Text.Megaparsec         hiding ( State )
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
 
-type Parser = ParsecT Void Text (State ParserState)
-data ParserState = PS
-  { _map   :: HashMap Text (Int, Term)
-  , _depth :: Int
-  }
+type Parser = Parsec Void Text
 
 -- | single line comment
 lineComment :: Parser ()
@@ -54,121 +42,115 @@ spaces = spaceConsumer (" \t" :: String)
 anySpaces :: Parser ()
 anySpaces = spaceConsumer (" \t\r\n" :: String)
 
--- | arbitrary symbol consumer
-symbol :: Text -> Parser Text
-symbol = string
+seperator :: Parser ()
+seperator = (some (oneOf (";\r\n" :: String)) <* anySpaces) >> pure ()
 
 -- | symbol consumer with arbitrary spaces behind
-startSymbol :: Text -> Parser Text
-startSymbol t = symbol t <* anySpaces
-
--- | natural number
-nat :: Parser Nat
-nat = natify <$> between (startSymbol "<") (symbol ">") L.decimal
- where
-  natify 0 = Z
-  natify n = S $ Num $ natify (n - 1 :: Integer)
-
--- | convert de Bruijn indices to levels
-toLevel :: Int -> Parser Term
-toLevel n = do
-  PS { _depth = d } <- get
-  pure $ Lvl $ d - n - 1
-
--- | abstraction, entering increases the abstraction depth
-abs :: Parser Term
-abs = between (startSymbol "[")
-              (symbol "]")
-              (gets (Abs <$> _depth) <*> (inc *> block <* dec))
- where
-  inc = modify $ \r@(PS { _depth = d }) -> r { _depth = d + 1 }
-  dec = modify $ \r@(PS { _depth = d }) -> r { _depth = d - 1 }
-
--- | de Bruijn index, parsed to de Bruijn level
-idx :: Parser Term
-idx = L.decimal >>= toLevel
-
--- | single number: <n> | S <term> | Z
-num :: Parser Term
-num =
-  (Num <$> nat)
-    <|> (Num <$> ((string "S" *> spaces $> S) <*> term))
-    <|> (Num <$> (string "Z" $> Z))
-
--- | unbounded iterator: REC (<term>, <nat>), <term>, <term>, <term>
-rec :: Parser Term
-rec = do
-  _  <- symbol "REC"
-  _  <- spaces
-  _  <- startSymbol "("
-  t1 <- term
-  _  <- spaces
-  _  <- startSymbol ","
-  t2 <- term
-  _  <- spaces
-  _  <- startSymbol ")"
-  _  <- startSymbol ","
-  u  <- term
-  _  <- spaces
-  _  <- startSymbol ","
-  v  <- term
-  _  <- spaces
-  _  <- startSymbol ","
-  w  <- term
-  pure $ Rec t1 t2 u v w
-
--- | single identifier, directly parsed to corresponding term
-def :: Parser Term
-def = do
-  name                             <- identifier
-  PS { _map = names, _depth = d1 } <- get
-  case M.lookup name names of
-    Just (d2, t) -> pure $ shift (d1 - d2) t
-    Nothing      -> fail $ T.unpack name <> " is not in scope"
-
--- | single lambda term, potentially a left application fold of many
-term :: Parser Term
-term = try chain <|> once
- where
-  once  = abs <|> idx <|> num <|> rec <|> def <|> parens block
-  chain = foldl1 App <$> sepEndBy1 (try once) (char ' ')
+symbol :: Text -> Parser Text
+symbol t = string t <* anySpaces
 
 -- | single identifier, a-z
 identifier :: Parser Text
-identifier = T.pack <$> some lowerChar
+identifier = T.pack <$> some (lowerChar <|> upperChar)
 
--- | single definition, <identifier> = <term>
-definition :: Parser ()
+-- | single mixfix operator
+operator :: Parser Text
+operator = T.pack <$> some (oneOf ("+-*/<>=" :: String))
+
+-- | infix function: <singleton> <operator> <singleton>
+-- TODO: make mixier
+mixfix :: Parser Term
+mixfix = do
+  l  <- singleton
+  _  <- spaces
+  op <- operator
+  _  <- spaces
+  r  <- singleton
+  return $ Mixfix op l r
+
+-- | if expression: if (<term>) <term> else <term>
+ifElse :: Parser Term
+ifElse = do
+  _      <- symbol "if"
+  clause <- parens term
+  _      <- anySpaces
+  true   <- term
+  _      <- anySpaces
+  _      <- symbol "else"
+  false  <- term
+  return $ If clause true false
+
+-- | do action: bind | unit
+-- | bind: <identifier> <- <term>
+-- | unit: <term>
+doAction :: Parser Action
+doAction = try bind <|> unit
+ where
+  bind = do
+    name <- identifier
+    _    <- spaces
+    _    <- symbol "<-"
+    t    <- term
+    return $ Bind name t
+  unit = Unit <$> term
+
+-- | do block: do ( <doAction>+ )
+doBlock :: Parser Term
+doBlock = do
+  _       <- symbol "do"
+  actions <- parens $ doAction `sepEndBy1` seperator
+  return $ Do actions
+
+-- | single decimal number
+number :: Parser Term
+number = Num <$> L.decimal
+
+-- | single identifier (function / parameter binding)
+var :: Parser Term
+var = Var <$> identifier
+
+singleton :: Parser Term
+singleton = ifElse <|> doBlock <|> number <|> var <|> parens block
+
+-- | single term, potentially a left application fold of many
+term :: Parser Term
+term = try chain <|> once
+ where
+  once  = try mixfix <|> singleton
+  chain = foldl1 App <$> sepEndBy1 (try once) (char ' ')
+
+-- | single definition: <identifier> <identifier>* = <term>
+definition :: Parser Term
 definition = do
-  name <- identifier
-  _    <- spaces
-  _    <- startSymbol "="
-  _    <- spaces
-  body <- term
-  modify $ \r@(PS { _map = m, _depth = d }) ->
-    r { _map = M.insert name (d, body) m }
+  _      <- anySpaces
+  name   <- identifier
+  _      <- spaces
+  params <- identifier `sepEndBy` spaces
+  _      <- symbol "="
+  body   <- term
+  return $ Definition name params body
 
 -- | many definitions, seperated by newline or semicolon
-definitions :: Parser [()]
-definitions = endBy (try definition) (oneOf (";\n" :: String) <* anySpaces)
+definitions :: Parser [Term]
+definitions = sepEndBy (try definition) seperator
 
 -- | single "let..in" block: many definitions before a single term
 block :: Parser Term
 block = do
-  (PS { _map = m }) <- get -- backup
-  b                 <- definitions *> term
-  _                 <- anySpaces
-  modify $ \r -> r { _map = m } -- restore
-  pure b
+  _  <- anySpaces
+  ds <- definitions
+  _  <- anySpaces
+  t  <- term
+  _  <- anySpaces
+  return $ Block ds t
 
 -- TODO: add preprocessor commands?
 program :: Parser Term
 program = block
 
 parseProgram :: Text -> Either String Term
-parseProgram s = prettify $ evalState
-  (runParserT (anySpaces *> program <* anySpaces <* eof) "" s)
-  PS { _map = M.empty, _depth = 0 }
+parseProgram s = prettify
+  $ runParser (anySpaces *> program <* anySpaces <* eof) "" s
  where
   prettify (Right t  ) = Right t
   prettify (Left  err) = Left $ errorBundlePretty err
