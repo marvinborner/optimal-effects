@@ -18,23 +18,6 @@ a - b = b pred a
 a <= b =
   if (isZero a) true
   else if (isZero b) false
-  else ((a - 1) <= (b - 1))
+  else ((pred a) <= (pred b))
 
-a * b = (
-  comp x = a (b x)
-  comp
-)
-
-fac n =
-  if (n <= 0) 1
-  else (
-    prev = fac (n - 1)
-    n * prev
-  )
-
-fac 10
-
--- do (
---   n <- readInt
---   writeInt (fac n)
--- )
+5 <= 5

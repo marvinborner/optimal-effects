@@ -8,6 +8,7 @@ module Language.Front.Parser
 
 import           Control.Monad                  ( void )
 import           Data.Front                     ( Action(..)
+                                                , Identifier
                                                 , Term(..)
                                                 )
 import           Data.Text                      ( Text )
@@ -56,11 +57,11 @@ symbolN :: Text -> Parser Text
 symbolN = L.symbol scn
 
 -- | single identifier, a-z
-identifier :: Parser Text
+identifier :: Parser Identifier
 identifier = T.pack <$> some (lowerChar <|> upperChar)
 
 -- | single mixfix operator
-operator :: Parser Text
+operator :: Parser Identifier
 operator = T.pack <$> some (oneOf ("+-*/<>=?!" :: String))
 
 -- | infix function: <singleton> <operator> <singleton>
@@ -70,7 +71,7 @@ mixfix = do
   l  <- lexeme singleton
   op <- lexeme operator
   r  <- lexeme singleton
-  return $ Mixfix op l r
+  return $ App (App (Var op) l) r
 
 -- | if expression: if (<term>) <term> else <term>
 ifElse :: Parser Term
@@ -92,15 +93,15 @@ doAction = try bind <|> unit
     name <- lexeme identifier
     _    <- symbol "<-"
     t    <- lexemeN term
-    return $ Bind name t
+    return $ Bind name t (Unit (Var "foo"))
   unit = Unit <$> lexemeN term
 
 -- | do block: do ( <doAction>+ )
 doBlock :: Parser Term
 doBlock = do
-  _       <- symbol "do"
-  actions <- lexeme $ parens $ some doAction
-  return $ Do actions
+  _      <- symbol "do"
+  action <- lexeme $ parens $ doAction -- TODO
+  return $ Do action
 
 -- | single decimal number
 number :: Parser Term
@@ -117,14 +118,17 @@ singleton = ifElse <|> doBlock <|> number <|> var <|> parens block
 term :: Parser Term
 term = foldl1 App <$> some (lexeme $ try mixfix <|> singleton)
 
+-- | single infix definition: <identifier> <operator> <identifier> = <term>
+-- TODO: make mixier
 mixDefinition :: Parser Term
 mixDefinition = do
   l    <- lexeme identifier
-  op   <- lexeme (parens operator)
+  op   <- lexeme operator
   r    <- lexeme identifier
   _    <- symbolN "="
   body <- lexemeN term
-  return $ Definition op [l, r] body
+  next <- block
+  return $ Definition op [l, r] body next
 
 -- | single definition: <identifier> <identifier>* = <term>
 definition :: Parser Term
@@ -133,18 +137,12 @@ definition = do
   params <- many $ lexeme identifier
   _      <- symbolN "="
   body   <- lexemeN term
-  return $ Definition name params body
-
--- | many definitions, seperated by newline or semicolon
-definitions :: Parser [Term]
-definitions = many (scn *> (try mixDefinition <|> try definition))
+  next   <- block
+  return $ Definition name params body next
 
 -- | single "let..in" block: many definitions before a single term
 block :: Parser Term
-block = do
-  ds <- lexemeN definitions
-  t  <- lexemeN term
-  return $ Block ds t
+block = scn *> (try mixDefinition <|> try definition <|> term) <* scn
 
 -- TODO: add preprocessor commands?
 program :: Parser Term

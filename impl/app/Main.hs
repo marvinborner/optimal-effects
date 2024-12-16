@@ -6,14 +6,19 @@ module Main
   ( main
   ) where
 
-import           Data.Core                     as Core
+import qualified Data.Core                     as Core
                                                 ( Term(..) )
-import           Data.Front                    as Front
+import qualified Data.Front                    as Front
                                                 ( Term(..) )
 import qualified Data.Text                     as T
-import           Language.Core.Reducer          ( nf )
-import           Language.Front.Parser         as Front
+import           Debug.Trace
+import qualified Language.Front.Parser         as Front
                                                 ( parseProgram )
+import qualified Language.Front.Transformer.Lambda
+                                               as Front
+                                                ( transformLambda )
+import qualified Language.Lambda.Reducer       as Lambda
+                                                ( nf )
 import           Options.Applicative            ( (<**>)
                                                 , Parser
                                                 , execParser
@@ -33,8 +38,11 @@ args :: Parser Args
 args = pure $ Args ArgEval
 
 -- pipeline :: T.Text -> Either String Core.Term
-pipeline program = do
-  Front.parseProgram program
+pipeline input = do
+  front  <- Front.parseProgram input
+  lambda <- Front.transformLambda front
+  return $ Lambda.nf
+    (trace (show front <> "\n\n\n" <> show lambda <> "\n\n\n") lambda)
 
 actions :: Args -> IO ()
 actions Args { _argMode = ArgEval } = do

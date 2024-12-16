@@ -29,7 +29,9 @@ library
       Language.Core.Parser
       Language.Core.Reducer
       Language.Front.Parser
+      Language.Front.Transformer.Lambda
       Language.Lambda.Parser
+      Language.Lambda.Reducer
   other-modules:
       Paths_opteff
   hs-source-dirs:
