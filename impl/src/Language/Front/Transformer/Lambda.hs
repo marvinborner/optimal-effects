@@ -5,6 +5,10 @@ module Language.Front.Transformer.Lambda
   ) where
 
 
+import           Control.Monad.Except           ( ExceptT
+                                                , runExceptT
+                                                , throwError
+                                                )
 import           Control.Monad.State            ( State
                                                 , evalState
                                                 , get
@@ -19,7 +23,9 @@ import qualified Data.Lambda                   as Lambda
 import           Data.List                      ( elemIndex )
 import qualified Data.Text                     as T
 
-type TransState = State [Identifier]
+-- | Transformation monad
+-- | passes a stack of identifiers for de Bruijn translation
+type TransM = ExceptT String (State [Identifier])
 
 toChurch :: Int -> Lambda.Term
 toChurch = Lambda.Abs . Lambda.Abs . go
@@ -37,6 +43,7 @@ yCombinator = Lambda.Abs
     )
   )
 
+-- | True if n is used recursively in body
 isRecursive :: Identifier -> Term -> Bool
 isRecursive n (Definition n' params body next)
   | n `elem` params = isRecursive n next
@@ -58,8 +65,7 @@ wrap :: Int -> Lambda.Term -> Lambda.Term
 wrap 0 t = t
 wrap n t = Lambda.Abs $ wrap (n - 1) t
 
--- TODO: return Either
-transform :: Term -> TransState Lambda.Term
+transform :: Term -> TransM Lambda.Term
 transform (Definition n params body next)
   | isRecursive n body = do
     s <- get
@@ -86,9 +92,9 @@ transform (If clause true false) = do
 transform (Var n) = do
   s <- get
   let maybeIdx = elemIndex n s
-  return $ case maybeIdx of
-    Nothing  -> error $ "not found " <> T.unpack n
-    Just idx -> Lambda.Idx idx
+  case maybeIdx of
+    Nothing  -> throwError $ "Identifier not found: " <> T.unpack n
+    Just idx -> return $ Lambda.Idx idx
 transform (App a b) = do
   a' <- transform a
   b' <- transform b
@@ -98,4 +104,4 @@ transform t       = error $ show t
 -- transform (Do as) = 
 
 transformLambda :: Term -> Either String Lambda.Term
-transformLambda t = Right $ evalState (transform t) []
+transformLambda t = evalState (runExceptT $ transform t) []
