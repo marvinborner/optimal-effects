@@ -26,8 +26,38 @@ library
       Data.Core
       Data.Front
       Data.Lambda
+      GraphRewriting.GL.Canvas
+      GraphRewriting.GL.Global
+      GraphRewriting.GL.HyperEdge
+      GraphRewriting.GL.Menu
+      GraphRewriting.GL.Render
+      GraphRewriting.GL.UI
+      GraphRewriting.Graph
+      GraphRewriting.Graph.Internal
+      GraphRewriting.Graph.Read
+      GraphRewriting.Graph.Types
+      GraphRewriting.Graph.Write
+      GraphRewriting.Graph.Write.Unsafe
+      GraphRewriting.Layout.Coulomb
+      GraphRewriting.Layout.Force
+      GraphRewriting.Layout.Geometry
+      GraphRewriting.Layout.Gravitation
+      GraphRewriting.Layout.PortSpec
+      GraphRewriting.Layout.Position
+      GraphRewriting.Layout.Rotation
+      GraphRewriting.Layout.RotPortSpec
+      GraphRewriting.Layout.SpringEmbedder
+      GraphRewriting.Layout.Wrapper
+      GraphRewriting.Pattern
+      GraphRewriting.Pattern.InteractionNet
+      GraphRewriting.Pattern.Internal
+      GraphRewriting.Rule
+      GraphRewriting.Rule.Internal
+      Language.Core.GL
+      Language.Core.Graph
       Language.Core.Parser
       Language.Core.Reducer
+      Language.Core.Rules
       Language.Front.Parser
       Language.Front.Transformer.Lambda
       Language.Lambda.Parser
@@ -38,10 +68,14 @@ library
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      AC-Vector >=2.4.0
+    , base >=4.9 && <5
+    , base-unicode-symbols >=0.2 && <0.3
+    , containers >=0.3 && <0.7
+    , GLUT >=2.2 && <3
+    , OpenGL >= 3.0 && <4
     , megaparsec
     , mtl
-    , optparse-applicative
     , text
     , unordered-containers
   default-language: Haskell2010
@@ -54,11 +88,6 @@ executable opteff-exe
       app
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
-    , megaparsec
-    , mtl
-    , opteff
+    opteff
     , optparse-applicative
-    , text
-    , unordered-containers
   default-language: Haskell2010
