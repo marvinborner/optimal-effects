@@ -128,7 +128,7 @@ mixDefinition = do
   _    <- symbolN "="
   body <- lexemeN term
   next <- block
-  return $ Definition op [l, r] body next
+  return $ Def op [l, r] body next
 
 -- | single definition: <identifier> <identifier>* = <term>
 definition :: Parser Term
@@ -138,7 +138,7 @@ definition = do
   _      <- symbolN "="
   body   <- lexemeN term
   next   <- block
-  return $ Definition name params body next
+  return $ Def name params body next
 
 -- | single "let..in" block: many definitions before a single term
 block :: Parser Term

@@ -45,10 +45,12 @@ yCombinator = Lambda.Abs
 
 -- | True if n is used recursively in body
 isRecursive :: Identifier -> Term -> Bool
-isRecursive n (Definition n' params body next)
+isRecursive n (Def n' params body next)
   | n `elem` params = isRecursive n next
   | n == n'         = isRecursive n body
   | otherwise       = isRecursive n body || isRecursive n next
+isRecursive n (Abs n' t) | n == n'   = False
+                         | otherwise = isRecursive n t
 isRecursive n (If clause true false) =
   isRecursive n clause || isRecursive n true || isRecursive n false
 isRecursive n (Var n') | n == n'   = True
@@ -66,7 +68,7 @@ wrap 0 t = t
 wrap n t = Lambda.Abs $ wrap (n - 1) t
 
 transform :: Term -> TransM Lambda.Term
-transform (Definition n params body next)
+transform (Def n params body next)
   | isRecursive n body = do
     s <- get
     put (reverse (n : params) ++ s)

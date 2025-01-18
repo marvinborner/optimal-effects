@@ -7,13 +7,19 @@ module Main
   ) where
 
 import qualified Data.Core                     as Core
-                                                ( Term(..) )
 import qualified Data.Front                    as Front
                                                 ( Term(..) )
 import qualified Data.Text                     as T
 import           Debug.Trace
+import qualified Language.Core.Reducer         as Core
+                                                ( nf
+                                                , visualize
+                                                )
 import qualified Language.Front.Parser         as Front
                                                 ( parseProgram )
+import qualified Language.Front.Transformer.Core
+                                               as Front
+                                                ( transformCore )
 import qualified Language.Front.Transformer.Lambda
                                                as Front
                                                 ( transformLambda )
@@ -39,20 +45,22 @@ args = pure $ Args ArgEval
 
 -- pipeline :: T.Text -> Either String Core.Term
 pipeline input = do
-  front  <- Front.parseProgram input
-  lambda <- Front.transformLambda front
-  return $ Lambda.nf
-    (trace (show front <> "\n\n\n" <> show lambda <> "\n\n\n") lambda)
+  front <- Front.parseProgram input
+  Front.transformCore front
+  -- lambda <- Front.transformLambda front
+  -- return $ Lambda.nf
+  --   (trace (show front <> "\n\n\n" <> show lambda <> "\n\n\n") lambda)
 
 actions :: Args -> IO ()
 actions Args { _argMode = ArgEval } = do
   program <- getContents
   case pipeline (T.pack program) of
-    Left err -> putStrLn err
-    Right out ->
-      let term = show out
-          -- normal = show $ nf out
-      in  putStrLn $ term -- <> "\n" <> normal
+    Left  err  -> putStrLn err
+    Right core -> Core.visualize core
+    -- Right out ->
+    --   let term = show out
+    --       -- normal = show $ nf out
+    --   in  putStrLn $ term -- <> "\n" <> normal
 
 main :: IO ()
 main = execParser opts >>= actions

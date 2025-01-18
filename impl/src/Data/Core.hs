@@ -1,69 +1,96 @@
--- MIT License, Copyright (c) 2024 Marvin Borner
+-- Parts were originally written for lambdascope in `Graph.hs`
+--   under the BSD-3-Clause License (as in src/GraphRewriting/LICENSE)
+-- Copyright (c) 2010, Jan Rochel
+-- Copyright (c) 2024, Marvin Borner
 
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 module Data.Core
-  ( Term(..)
-  , Nat(..)
-  , fold
-  , shift
+  ( NodeLS(..)
+  , pp
+  , lmo
   ) where
 
-import           Data.Functor.Identity          ( runIdentity )
-import           Prelude                 hiding ( abs
-                                                , min
-                                                )
+import           Data.View
+import           GraphRewriting.Graph.Types
+import           GraphRewriting.Pattern.InteractionNet
+import           GraphRewriting.Strategies.LeftmostOutermost
 
-data Nat = Z | S Term
+-- | The signature of our graph
+data NodeLS
+        = Initiator   {out :: Port}
+        | Applicator  {inp, func, arg :: Port}
+        | Abstractor  {inp, body, var :: Port, name :: String}
+        | Constant    {inp :: Port, args :: [Port], name :: String}
+        | Eraser      {inp :: Port}
+        | Duplicator  {level :: Int, inp, out1, out2 :: Port}
+        | Delimiter   {level :: Int, inp, out :: Port}
+        | Multiplexer {out :: Port, ins :: [Port]} -- only intermediate compilation result
+        | Case        {inp :: Port, out :: Port, alts :: [Port], names :: [String]}
+        | Operator    {inp :: Port, ops :: [Port], arity :: Int, lmop :: Int,
+                       function :: [String] -> Maybe String, name :: String}
 
-data Term = Abs Int Term                 -- | Abstraction with level
-          | App Term Term                -- | Application
-          | Lvl Int                      -- | de Bruijn level
-          | Num Nat                      -- | Peano numeral
-          | Rec Term Term Term Term Term -- | Unbounded iteration
+-- | equality as defined in the paper with only the relevant cases included
+instance Eq NodeLS where
+  Eraser{}                  == Eraser{}                  = True
+  Duplicator { level = l1 } == Duplicator { level = l2 } = l1 == l2
+  Delimiter { level = l1 }  == Delimiter { level = l2 }  = l1 == l2
+  _                         == _                         = False
 
-instance Show Nat where
-  show Z     = "Z"
-  show (S t) = "S(" <> show t <> ")"
+instance View [Port] NodeLS where
+  inspect node = case node of
+    Initiator { out = o }                        -> [o]
+    Applicator { inp = i, func = f, arg = a }    -> [i, f, a]
+    Abstractor { inp = i, body = b, var = v }    -> [i, b, v]
+    Constant { inp = i, args = as }              -> i : as
+    Eraser { inp = i }                           -> [i]
+    Duplicator { inp = i, out1 = o1, out2 = o2 } -> [i, o1, o2]
+    Delimiter { inp = i, out = o }               -> [i, o]
+    Multiplexer { out = o, ins = is }            -> o : is
+    Case { inp = i, out = o, alts = as }         -> i : o : as
+    Operator { inp = i, ops = os }               -> i : os
+  update ports node = case node of
+    Initiator{}  -> node { out = o } where [o] = ports
+    Applicator{} -> node { inp = i, func = f, arg = a }
+      where [i, f, a] = ports
+    Abstractor{} -> node { inp = i, body = b, var = v }
+      where [i, b, v] = ports
+    Constant{}   -> node { inp = i, args = as } where i : as = ports
+    Eraser{}     -> node { inp = i } where [i] = ports
+    Duplicator{} -> node { inp = i, out1 = o1, out2 = o2 }
+      where [i, o1, o2] = ports
+    Delimiter{}   -> node { inp = i, out = o } where [i, o] = ports
+    Multiplexer{} -> node { out = o, ins = is } where o : is = ports
+    Case{} -> node { inp = i, out = o, alts = as } where i : o : as = ports
+    Operator{}    -> node { inp = i, ops = os } where i : os = ports
 
-instance Show Term where
-  showsPrec _ (Abs l m) =
-    showString "(\\" . shows l . showString "." . shows m . showString ")"
-  showsPrec _ (App m n) =
-    showString "(" . shows m . showString " " . shows n . showString ")"
-  showsPrec _ (Lvl i) = shows i
-  showsPrec _ (Num n) = shows n
-  showsPrec _ (Rec t1 t2 u v w) =
-    showString "REC ("
-      . shows t1
-      . showString ", "
-      . shows t2
-      . showString "), "
-      . shows u
-      . showString ", "
-      . shows v
-      . showString ", "
-      . shows w
+instance INet NodeLS where
+  principalPort = pp
 
-fold
-  :: (Int -> Term -> Term)
-  -> (Term -> Term -> Term)
-  -> (Int -> Term)
-  -> (Nat -> Term)
-  -> (Term -> Term -> Term -> Term -> Term -> Term)
-  -> Term
-  -> Term
-fold abs app lvl num rec (Abs l m) = abs l $ fold abs app lvl num rec m
-fold abs app lvl num rec (App a b) =
-  app (fold abs app lvl num rec a) (fold abs app lvl num rec b)
-fold _   _   lvl _   _   (Lvl n          ) = lvl n
-fold _   _   _   num _   (Num Z          ) = num Z
-fold abs app lvl num rec (Num (S t)) = num $ S $ fold abs app lvl num rec t
-fold abs app lvl num rec (Rec t1 t2 u v w) = rec
-  (fold abs app lvl num rec t1)
-  (fold abs app lvl num rec t2)
-  (fold abs app lvl num rec u)
-  (fold abs app lvl num rec v)
-  (fold abs app lvl num rec w)
+-- The number is an index that specifies which port is the principal port out of the list of ports
+pp :: NodeLS -> Port
+pp node = case node of
+  Initiator { out = o }                        -> o
+  Applicator { inp = i, func = f, arg = a }    -> f
+  Abstractor { inp = i, body = b, var = v }    -> i
+  Constant { inp = i, args = as }              -> i
+  Eraser { inp = i }                           -> i
+  Duplicator { inp = i, out1 = o1, out2 = o2 } -> i
+  Delimiter { inp = i, out = o }               -> i
+  Multiplexer { out = o, ins = is }            -> o
+  Case { inp = i, out = o, alts = as }         -> o
+  Operator { lmop = i, ops = os }              -> inspect node !! i
 
-shift :: Int -> Term -> Term
-shift 0 = id
-shift n = fold (\l m -> Abs (l + n) m) App (\l -> Lvl $ l + n) Num Rec
+instance LeftmostOutermost NodeLS where
+  lmoPort = lmo
+
+lmo :: NodeLS -> Maybe Port
+lmo node = case node of
+  Initiator { out = o }                        -> Just o
+  Applicator { inp = i, func = f, arg = a }    -> Just f
+  Abstractor { inp = i, body = b, var = v }    -> Nothing
+  Constant { inp = i, args = as }              -> Nothing
+  Eraser { inp = i }                           -> Just i
+  Duplicator { inp = i, out1 = o1, out2 = o2 } -> Just i
+  Delimiter { inp = i, out = o }               -> Just i
+  Case { inp = i, out = o, alts = as }         -> Just o
+  Operator { lmop = i, ops = os }              -> Just $ inspect node !! i

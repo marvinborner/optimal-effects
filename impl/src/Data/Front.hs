@@ -18,15 +18,16 @@ instance Show Action where
   show (Unit t    ) = show t
   show (Bind n t a) = show n <> " <- " <> show t <> "; " <> show a
 
-data Term = Definition Identifier [Identifier] Term Term
+data Term = Def Identifier [Identifier] Term Term
           | If Term Term Term
           | Var Identifier
           | App Term Term
+          | Abs Identifier Term
           | Num Int
           | Do Action
 
 instance Show Term where
-  show (Definition n params body next) =
+  show (Def n params body next) =
     T.unpack n
       <> " "
       <> intercalate " " (T.unpack <$> params)

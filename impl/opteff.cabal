@@ -26,6 +26,7 @@ library
       Data.Core
       Data.Front
       Data.Lambda
+      Data.View
       GraphRewriting.GL.Canvas
       GraphRewriting.GL.Global
       GraphRewriting.GL.HyperEdge
@@ -33,7 +34,6 @@ library
       GraphRewriting.GL.Render
       GraphRewriting.GL.UI
       GraphRewriting.Graph
-      GraphRewriting.Graph.Internal
       GraphRewriting.Graph.Read
       GraphRewriting.Graph.Types
       GraphRewriting.Graph.Write
@@ -50,20 +50,20 @@ library
       GraphRewriting.Layout.Wrapper
       GraphRewriting.Pattern
       GraphRewriting.Pattern.InteractionNet
-      GraphRewriting.Pattern.Internal
       GraphRewriting.Rule
-      GraphRewriting.Rule.Internal
       Language.Core.GL
-      Language.Core.Graph
-      Language.Core.Parser
       Language.Core.Reducer
       Language.Core.Rules
       Language.Front.Parser
       Language.Front.Transformer.Lambda
+      Language.Front.Transformer.Core
       Language.Lambda.Parser
       Language.Lambda.Reducer
   other-modules:
       Paths_opteff
+      GraphRewriting.Graph.Internal
+      GraphRewriting.Pattern.Internal
+      GraphRewriting.Rule.Internal
   hs-source-dirs:
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
@@ -75,7 +75,8 @@ library
     , GLUT >=2.2 && <3
     , OpenGL >= 3.0 && <4
     , megaparsec
-    , mtl
+ -- TOOD: don't use ListT
+    , mtl <=2.2.2
     , text
     , unordered-containers
   default-language: Haskell2010
@@ -89,5 +90,7 @@ executable opteff-exe
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     opteff
+    , base >=4.9 && <5
+    , text
     , optparse-applicative
   default-language: Haskell2010

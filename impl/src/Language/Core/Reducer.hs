@@ -1,43 +1,96 @@
--- MIT License, Copyright (c) 2024 Marvin Borner
+-- Parts were originally written for lambdascope in `Reducer.hs`
+--   under the BSD-3-Clause License (as in src/GraphRewriting/LICENSE)
+-- Copyright (c) 2010, Jan Rochel
+-- Copyright (c) 2024, Marvin Borner
+
+{-# LANGUAGE FlexibleContexts #-}
 
 module Language.Core.Reducer
   ( nf
+  , visualize
   ) where
 
-import           Data.Core                      ( Nat(..)
-                                                , Term(..)
-                                                , shift
-                                                )
+import           Data.Core
+import           GraphRewriting.GL.Render
+import           GraphRewriting.GL.UI          as UI
+import           GraphRewriting.Graph
+import           GraphRewriting.Graph.Read
+import           GraphRewriting.Graph.Write.Unsafe
+                                               as Unsafe
+import           GraphRewriting.Layout.Coulomb
+import           GraphRewriting.Layout.Gravitation
+import           GraphRewriting.Layout.SpringEmbedder
+import           GraphRewriting.Layout.Wrapper as Layout
+import           GraphRewriting.Pattern
+import           GraphRewriting.Rule
+import           GraphRewriting.Strategies.Control
+                                               as Control
+import           GraphRewriting.Strategies.LeftmostOutermost
+import           Language.Core.GL
+import           Language.Core.Rules
 
-data Singleton = TermTag Term | RecTag Term Term Term Term
+instance Render n => Render (Layout.Wrapper n) where
+  render = render . wrappee
+instance PortSpec n => PortSpec (Control.Wrapper n) where
+  portSpec = portSpec . wrapped
+instance LeftmostOutermost n => LeftmostOutermost (Layout.Wrapper n) where
+  lmoPort = lmoPort . wrappee
 
--- TODO: There will only ever be one substitution, so don't iterate the entire tree!
--- WARNING: This function also shifts the substituted term and the levels of the parent!
--- TODO: replace with foldM?
--- In compilation this won't be necessary since Abs can have a direct pointer to the variable
-subst :: Int -> Int -> Term -> Term -> Term
-subst c l (Abs d m) s = Abs (d - 1) $ subst (c + 1) l m s
-subst c l (App a b) s = App (subst c l a s) (subst c l b s)
-subst c l (Lvl i) s | l == i    = shift c s
-                    | otherwise = Lvl $ i - 1
-subst _ _ (Num Z          ) _ = Num Z
-subst c l (Num (S m)      ) s = Num $ S $ subst c l m s
-subst c l (Rec t1 t2 u v w) s = Rec (subst c l t1 s)
-                                    (subst c l t2 s)
-                                    (subst c l u s)
-                                    (subst c l v s)
-                                    (subst c l w s)
+layoutStep
+  :: (PortSpec n, View Position n, View Rotation n, View [Port] n)
+  => Node
+  -> Rewrite n ()
+layoutStep n = do
+  (cgf, cf, sf, rot) <- readOnly $ do
+    cgf <- centralGravitation n
+    cf  <- coulombForce n
+    sf  <- springForce 1.5 n
+    rot <- angularMomentum n
+    return (cgf, cf, sf, rot)
+  Unsafe.adjustNode n
+    $ Position
+    . sf (\x -> min 10 (x * 0.9))
+    . cgf (\x -> min 10 (x * 0.01))
+    . cf (\x -> min 10 (100 / (x ^ 2 + 0.1)))
+    . position
+  Unsafe.adjustNode n $ rot (* 0.9)
 
-machine :: Term -> [Singleton] -> Term
-machine (App a b        ) s                    = machine a (TermTag b : s)
-machine (Abs l u        ) (TermTag t : s)      = machine (subst 0 l u t) s
-machine (Rec t1 t2 u v w) s = machine t1 (RecTag t2 u v w : s)
-machine (Num Z          ) (RecTag _ u _ _ : s) = machine u s
-machine (Num (S t1)) ((RecTag t2 u v w) : s) =
-  machine v (TermTag (Rec (App w t1) (App w t2) u v w) : s)
-machine (Num (S t)) s = Num $ S $ machine t s -- TODO: ??
-machine t           _ = t
+-- | Reduce graph to normal form
+nf :: Graph NodeLS -> Graph NodeLS
+nf term = term
 
--- | Reduce term to normal form
-nf :: Term -> Term
-nf t = machine t []
+-- | Visualize reduction to normal form
+-- TODO: only app should use IO
+visualize :: Graph NodeLS -> IO ()
+visualize term = do
+  (_, _) <- UI.initialise
+  let hypergraph  = execGraph (apply $ exhaustive compileShare) term
+  let layoutGraph = Layout.wrapGraph hypergraph
+  UI.run 50 id layoutStep layoutGraph ruleTree
+
+ruleTree :: (View NodeLS n, View [Port] n) => LabelledTree (Rule n)
+ruleTree = Branch
+  "All"
+  [ Leaf "Beta Reduction" beta
+  , Branch
+    "All but Beta"
+    [ Leaf "Duplicate" duplicate
+    , Leaf
+      "Eliminate"
+      (   eliminateDelimiterEraser
+      <|> eliminateDelimiterConstant
+      <|> eliminateDuplicator
+      )
+    , Leaf "Annihilate"        annihilate
+    , Leaf "Commute Delimiter" commuteDelimiter
+    , Leaf "Erase"             eraser
+    , Leaf "Case"              caseNode
+    , Branch
+      "Primitive"
+      [ Leaf "Constant"       applyConstant
+      , Leaf "Apply Operator" applyOperator
+      , Leaf "Exec Operator"  execOperator
+      , Leaf "Reduce Operand" reduceOperand
+      ]
+    ]
+  ]
