@@ -84,13 +84,5 @@ ruleTree = Branch
     , Leaf "Annihilate"        annihilate
     , Leaf "Commute Delimiter" commuteDelimiter
     , Leaf "Erase"             eraser
-    , Leaf "Case"              caseNode
-    , Branch
-      "Primitive"
-      [ Leaf "Constant"       applyConstant
-      , Leaf "Apply Operator" applyOperator
-      , Leaf "Exec Operator"  execOperator
-      , Leaf "Reduce Operand" reduceOperand
-      ]
     ]
   ]

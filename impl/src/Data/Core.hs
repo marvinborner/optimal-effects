@@ -25,9 +25,6 @@ data NodeLS
         | Duplicator  {level :: Int, inp, out1, out2 :: Port}
         | Delimiter   {level :: Int, inp, out :: Port}
         | Multiplexer {out :: Port, ins :: [Port]} -- only intermediate compilation result
-        | Case        {inp :: Port, out :: Port, alts :: [Port], names :: [String]}
-        | Operator    {inp :: Port, ops :: [Port], arity :: Int, lmop :: Int,
-                       function :: [String] -> Maybe String, name :: String}
 
 -- | equality as defined in the paper with only the relevant cases included
 instance Eq NodeLS where
@@ -46,8 +43,6 @@ instance View [Port] NodeLS where
     Duplicator { inp = i, out1 = o1, out2 = o2 } -> [i, o1, o2]
     Delimiter { inp = i, out = o }               -> [i, o]
     Multiplexer { out = o, ins = is }            -> o : is
-    Case { inp = i, out = o, alts = as }         -> i : o : as
-    Operator { inp = i, ops = os }               -> i : os
   update ports node = case node of
     Initiator{}  -> node { out = o } where [o] = ports
     Applicator{} -> node { inp = i, func = f, arg = a }
@@ -60,8 +55,6 @@ instance View [Port] NodeLS where
       where [i, o1, o2] = ports
     Delimiter{}   -> node { inp = i, out = o } where [i, o] = ports
     Multiplexer{} -> node { out = o, ins = is } where o : is = ports
-    Case{} -> node { inp = i, out = o, alts = as } where i : o : as = ports
-    Operator{}    -> node { inp = i, ops = os } where i : os = ports
 
 instance INet NodeLS where
   principalPort = pp
@@ -77,8 +70,6 @@ pp node = case node of
   Duplicator { inp = i, out1 = o1, out2 = o2 } -> i
   Delimiter { inp = i, out = o }               -> i
   Multiplexer { out = o, ins = is }            -> o
-  Case { inp = i, out = o, alts = as }         -> o
-  Operator { lmop = i, ops = os }              -> inspect node !! i
 
 instance LeftmostOutermost NodeLS where
   lmoPort = lmo
@@ -92,5 +83,3 @@ lmo node = case node of
   Eraser { inp = i }                           -> Just i
   Duplicator { inp = i, out1 = o1, out2 = o2 } -> Just i
   Delimiter { inp = i, out = o }               -> Just i
-  Case { inp = i, out = o, alts = as }         -> Just o
-  Operator { lmop = i, ops = os }              -> Just $ inspect node !! i

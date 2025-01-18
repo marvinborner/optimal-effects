@@ -32,12 +32,6 @@ instance PortSpec NodeLS where
           , (Vector2 0.6 (-0.5)   , s)
           ]
         Delimiter{} -> [sd $ Vector2 0 0.7, sd $ Vector2 0 (-0.7)]
-        Case{} ->
-          sd n
-            : sd e
-            : [ sd $ rm (alpha alts * x) `mmul` sws | x <- [0 .. la alts - 1] ]
-        Operator{} ->
-          sd n : [ sd $ rm (alpha ops * x) `mmul` sws | x <- [0 .. la ops - 1] ]
    where
     n = Vector2 0 1
     e = Vector2 1 0
@@ -79,9 +73,6 @@ renderNode node = drawPorts node >> case node of
       vertex2 (0.8, 0)
       vertex2 (0.8, -0.3)
     renderString $ show $ level node
-  Case{} ->
-    drawNode ("case [" ++ foldr1 (\x y -> x ++ ", " ++ y) (names node) ++ "]")
-  Operator{} -> drawNode (name node)
 
 drawPorts :: NodeLS -> IO ()
 drawPorts n = sequence_
