@@ -111,8 +111,12 @@ number = Num <$> lexeme L.decimal
 var :: Parser Term
 var = Var <$> lexeme identifier
 
+-- | side effect (TODO: temporary!)
+eff :: Parser Term
+eff = Eff <$> (lexeme (string "readInt") <|> lexeme (string "writeInt"))
+
 singleton :: Parser Term
-singleton = ifElse <|> doBlock <|> number <|> var <|> parens block
+singleton = ifElse <|> doBlock <|> number <|> try eff <|> var <|> parens block
 
 -- | single term, potentially a left application fold of many
 term :: Parser Term

@@ -57,6 +57,7 @@ isRecursive n (Var n') | n == n'   = True
                        | otherwise = False
 isRecursive n (App a b     ) = isRecursive n a || isRecursive n b
 isRecursive _ (Num _       ) = False
+isRecursive _ (Eff _       ) = False
 isRecursive n (Do  (Unit t)) = isRecursive n t
 isRecursive n (Do (Bind n' t a))
   | n == n'   = isRecursive n t

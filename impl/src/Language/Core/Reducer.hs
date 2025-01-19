@@ -84,5 +84,12 @@ ruleTree = Branch
     , Leaf "Annihilate"        annihilate
     , Leaf "Commute Delimiter" commuteDelimiter
     , Leaf "Erase"             eraser
+    , Branch
+      "Effective"
+      [ Leaf "Constant"         applyConstant
+      , Leaf "Apply Effectful"  applyEffectful
+      , Leaf "Exec Effectful"   execEffectful
+      , Leaf "Reduce Effectful" reduceEffectful
+      ]
     ]
   ]

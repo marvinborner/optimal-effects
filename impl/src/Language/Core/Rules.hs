@@ -19,6 +19,9 @@ import           GraphRewriting.Pattern
 import           GraphRewriting.Pattern.InteractionNet
 import           GraphRewriting.Rule
 
+-- TODO: REMOVE THIS
+import           System.IO.Unsafe               ( unsafePerformIO )
+import           System.Process                 ( readProcess )
 
 compileShare :: (View [Port] n, View NodeLS n) => Rule n
 compileShare = do
@@ -150,6 +153,63 @@ applyConstant = do
   Applicator { inp = i, arg = a } :-: Constant { name = n, args = as } <-
     activePair
   replace $ byNode $ Constant { inp = i, name = n, args = as ++ [a] }
+
+applyEffectful :: (View [Port] n, View NodeLS n) => Rule n
+applyEffectful = do
+  Applicator { inp = i, arg = a } :-: Effectful { args = as, arity = ar, lmop = l, name = n } <-
+    activePair
+  require (ar > length as)
+  replace $ byNode $ Effectful { inp   = i
+                               , args  = as ++ [a]
+                               , arity = ar
+                               , lmop  = l
+                               , name  = n
+                               }
+
+-- TODO: Require that the lmoPort is not on one of the unreduced ports yet
+-- Do we only reduce operator args, if the operator has all args already?
+reduceEffectful :: (View [Port] n, View NodeLS n) => Rule n
+reduceEffectful = do
+  e@(Effectful { args = as, lmop = lmo }) <- node
+  opid <- previous
+  let ports   = inspect e :: [Port]
+  let lmoport = ports !! lmo
+  -- only change the lmo port if it is on top or if it is attached to a Constant
+  require (lmo == 0) <|> do
+    Constant{} <- nodeWith lmoport
+    return ()
+  port <- branch as -- get a pattern that matches each port in os
+  -- we require that at least one node attached to the effect is not a constant TODO??
+  requireFailure $ do
+    Constant{} <- nodeWith port
+    return ()
+  -- we need to add two, since the input port is not part of as, but is part of the port numbering
+  let unreducedport = 1 + fromJust (elemIndex port as)
+  return $ updateNode opid (e { lmop = unreducedport })
+
+runEffect "readInt" [] = Just $ unsafePerformIO $ do
+  result <- readProcess
+    "zenity"
+    ["--entry", "--title=Input", "--text=Please enter some input:"]
+    ""
+  return result
+runEffect "writeInt" [n] = Just $ unsafePerformIO $ do
+  result <- readProcess "zenity" ["--info", "--title=Output", "--text=" <> n] ""
+  return result
+runEffect n _ = error n
+
+execEffectful :: forall n . (View [Port] n, View NodeLS n) => Rule n
+execEffectful = do
+  Effectful { inp = i, args = as, arity = ar, name = n } <- node
+  opid <- previous
+  require (length as == ar)
+  -- check that all args are constants
+  argss <- forM as $ \a -> do
+    c@Constant{} <- adverse a opid
+    return c
+  case runEffect n (map name argss) of
+    Nothing -> mempty
+    Just n' -> replace $ byNode $ Constant { inp = i, args = [], name = n' }
 
 -- | Not the readback semantics as defined in the paper. Just a non-semantics-preserving erasure of all
 -- delimiters to make the graph more readable

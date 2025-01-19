@@ -24,6 +24,7 @@ data Term = Def Identifier [Identifier] Term Term
           | App Term Term
           | Abs Identifier Term
           | Num Int
+          | Eff Identifier
           | Do Action
 
 instance Show Term where
@@ -40,4 +41,5 @@ instance Show Term where
   show (Var n  ) = T.unpack n
   show (App a b) = "(" <> show a <> " " <> show b <> ")"
   show (Num n  ) = show n
+  show (Eff n  ) = T.unpack n
   show (Do  as ) = "do (" <> show as <> ")"
