@@ -5,13 +5,13 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
-module Language.Front.Transformer.Core
-  ( transformCore
+module Language.Front.Transformer.LambdaScope
+  ( transformLambdaScope
   ) where
 
 import           Control.Monad
-import           Data.Core
 import           Data.Front
+import           Data.LambdaScope
 import qualified Data.Text                     as T
 import           GraphRewriting.Graph
 import           GraphRewriting.Graph.Write
@@ -26,8 +26,8 @@ data Name = Name
   , reference     :: Compiler Edge
   }
 
-transformCore :: Term -> Either String (Graph NodeLS)
-transformCore term = Right $ flip execGraph emptyGraph $ do
+transformLambdaScope :: Term -> Either String (Graph NodeLS)
+transformLambdaScope term = Right $ flip execGraph emptyGraph $ do
   o <- newEdge
   i <- newNode Initiator { out = o }
   compile [] o term

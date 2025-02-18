@@ -62,7 +62,7 @@ identifier = T.pack <$> some (lowerChar <|> upperChar)
 
 -- | single mixfix operator
 operator :: Parser Identifier
-operator = T.pack <$> some (oneOf ("+-*/<>=?!" :: String))
+operator = T.pack <$> some (oneOf ("+-*/<>=?!&|" :: String))
 
 -- | infix function: <singleton> <operator> <singleton>
 -- TODO: make mixier

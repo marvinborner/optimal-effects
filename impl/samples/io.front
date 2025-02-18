@@ -1,2 +1,2 @@
-let x = readInt
+x = readInt
 writeInt x

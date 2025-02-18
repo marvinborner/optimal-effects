@@ -1,0 +1,23 @@
+-- Scott
+cons x xs c e = c x xs
+nil c e = e
+
+-- repeat x = (
+--   loop = cons x loop
+--   loop
+-- )
+-- 
+-- repeat 5
+
+a + b = (
+  add an bn = a an (b an bn)
+  add
+)
+
+sum l = l (
+  sn x y = x + y
+  sl x xs = sn x (sum xs)
+  sl
+) 0
+
+sum (cons 1 (cons 2 (cons 3 nil)))

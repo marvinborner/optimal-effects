@@ -13,6 +13,11 @@ pred n f x = (
   extract (n inc const)
 )
 
+a + b = (
+  add an bn = a an (b an bn)
+  add
+)
+
 a - b = b pred a
 
 a <= b =

@@ -32,7 +32,7 @@ fac n =
     n * prev
   )
 
-fac 10
+5
 
 -- do (
 --   n <- readInt

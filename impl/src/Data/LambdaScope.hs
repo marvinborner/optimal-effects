@@ -4,7 +4,7 @@
 -- Copyright (c) 2024, Marvin Borner
 
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
-module Data.Core
+module Data.LambdaScope
   ( NodeLS(..)
   , pp
   , lmo

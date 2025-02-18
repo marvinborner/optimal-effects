@@ -4,10 +4,10 @@
 -- Copyright (c) 2024, Marvin Borner
 
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
-module Language.Core.Rules where
+module Language.LambdaScope.Rules where
 
 import           Control.Monad
-import           Data.Core
+import           Data.LambdaScope
 import           Data.List                      ( delete
                                                 , elemIndex
                                                 , transpose

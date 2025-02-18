@@ -4,10 +4,10 @@
 -- Copyright (c) 2024, Marvin Borner
 
 {-# LANGUAGE FlexibleInstances #-}
-module Language.Core.GL
+module Language.LambdaScope.GL
   () where
 
-import           Data.Core
+import           Data.LambdaScope
 import           GraphRewriting.GL.Render
 import           GraphRewriting.Layout.PortSpec
 import           GraphRewriting.Strategies.Control

@@ -23,7 +23,7 @@ source-repository head
 
 library
   exposed-modules:
-      Data.Core
+      Data.LambdaScope
       Data.Front
       Data.Lambda
       Data.View
@@ -51,12 +51,12 @@ library
       GraphRewriting.Pattern
       GraphRewriting.Pattern.InteractionNet
       GraphRewriting.Rule
-      Language.Core.GL
-      Language.Core.Reducer
-      Language.Core.Rules
+      Language.LambdaScope.GL
+      Language.LambdaScope.Reducer
+      Language.LambdaScope.Rules
       Language.Front.Parser
       Language.Front.Transformer.Lambda
-      Language.Front.Transformer.Core
+      Language.Front.Transformer.LambdaScope
       Language.Lambda.Parser
       Language.Lambda.Reducer
   other-modules:

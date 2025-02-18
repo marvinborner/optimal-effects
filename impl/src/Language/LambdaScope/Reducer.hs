@@ -5,12 +5,12 @@
 
 {-# LANGUAGE FlexibleContexts #-}
 
-module Language.Core.Reducer
+module Language.LambdaScope.Reducer
   ( nf
   , visualize
   ) where
 
-import           Data.Core
+import           Data.LambdaScope
 import           GraphRewriting.GL.Render
 import           GraphRewriting.GL.UI          as UI
 import           GraphRewriting.Graph
@@ -26,8 +26,8 @@ import           GraphRewriting.Rule
 import           GraphRewriting.Strategies.Control
                                                as Control
 import           GraphRewriting.Strategies.LeftmostOutermost
-import           Language.Core.GL
-import           Language.Core.Rules
+import           Language.LambdaScope.GL
+import           Language.LambdaScope.Rules
 
 instance Render n => Render (Layout.Wrapper n) where
   render = render . wrappee

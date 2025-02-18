@@ -6,25 +6,25 @@ module Main
   ( main
   ) where
 
-import qualified Data.Core                     as Core
 import qualified Data.Front                    as Front
                                                 ( Term(..) )
+import qualified Data.LambdaScope              as LambdaScope
 import qualified Data.Text                     as T
 import           Debug.Trace
-import qualified Language.Core.Reducer         as Core
-                                                ( nf
-                                                , visualize
-                                                )
 import qualified Language.Front.Parser         as Front
                                                 ( parseProgram )
-import qualified Language.Front.Transformer.Core
-                                               as Front
-                                                ( transformCore )
 import qualified Language.Front.Transformer.Lambda
                                                as Front
                                                 ( transformLambda )
+import qualified Language.Front.Transformer.LambdaScope
+                                               as Front
+                                                ( transformLambdaScope )
 import qualified Language.Lambda.Reducer       as Lambda
                                                 ( nf )
+import qualified Language.LambdaScope.Reducer  as LambdaScope
+                                                ( nf
+                                                , visualize
+                                                )
 import           Options.Applicative            ( (<**>)
                                                 , Parser
                                                 , execParser
@@ -43,20 +43,20 @@ newtype Args = Args
 args :: Parser Args
 args = pure $ Args ArgEval
 
--- pipeline :: T.Text -> Either String Core.Term
+-- pipeline :: T.Text -> Either String LambdaScope.Term
 pipeline input = do
   front <- Front.parseProgram input
-  Front.transformCore front
   -- lambda <- Front.transformLambda front
-  -- return $ Lambda.nf
-  --   (trace (show front <> "\n\n\n" <> show lambda <> "\n\n\n") lambda)
+  -- let lnf = traceShow $ Lambda.nf
+  --       (trace (show front <> "\n\n\n" <> show lambda <> "\n\n\n") lambda)
+  Front.transformLambdaScope front
 
 actions :: Args -> IO ()
 actions Args { _argMode = ArgEval } = do
   program <- getContents
   case pipeline (T.pack program) of
     Left  err  -> putStrLn err
-    Right core -> Core.visualize core
+    Right core -> LambdaScope.visualize core
     -- Right out ->
     --   let term = show out
     --       -- normal = show $ nf out
