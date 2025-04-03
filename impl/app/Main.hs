@@ -8,20 +8,20 @@ module Main
 
 import qualified Data.Front                    as Front
                                                 ( Term(..) )
-import qualified Data.LambdaScope              as LambdaScope
 import qualified Data.Text                     as T
+import qualified Data.TokenPassing             as TokenPassing
 import           Debug.Trace
 import qualified Language.Front.Parser         as Front
                                                 ( parseProgram )
 import qualified Language.Front.Transformer.Lambda
                                                as Front
                                                 ( transformLambda )
-import qualified Language.Front.Transformer.LambdaScope
+import qualified Language.Front.Transformer.TokenPassing
                                                as Front
-                                                ( transformLambdaScope )
+                                                ( transformTokenPassing )
 import qualified Language.Lambda.Reducer       as Lambda
                                                 ( nf )
-import qualified Language.LambdaScope.Reducer  as LambdaScope
+import qualified Language.TokenPassing.Reducer as TokenPassing
                                                 ( nf
                                                 , visualize
                                                 )
@@ -43,20 +43,20 @@ newtype Args = Args
 args :: Parser Args
 args = pure $ Args ArgEval
 
--- pipeline :: T.Text -> Either String LambdaScope.Term
+-- pipeline :: T.Text -> Either String TokenPassing.Term
 pipeline input = do
   front <- Front.parseProgram input
   -- lambda <- Front.transformLambda front
   -- let lnf = traceShow $ Lambda.nf
   --       (trace (show front <> "\n\n\n" <> show lambda <> "\n\n\n") lambda)
-  Front.transformLambdaScope front
+  Front.transformTokenPassing front
 
 actions :: Args -> IO ()
 actions Args { _argMode = ArgEval } = do
   program <- getContents
   case pipeline (T.pack program) of
     Left  err  -> putStrLn err
-    Right core -> LambdaScope.visualize core
+    Right core -> TokenPassing.visualize core
     -- Right out ->
     --   let term = show out
     --       -- normal = show $ nf out

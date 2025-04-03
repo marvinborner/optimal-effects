@@ -24,6 +24,7 @@ source-repository head
 library
   exposed-modules:
       Data.LambdaScope
+      Data.TokenPassing
       Data.Front
       Data.Lambda
       Data.View
@@ -54,9 +55,13 @@ library
       Language.LambdaScope.GL
       Language.LambdaScope.Reducer
       Language.LambdaScope.Rules
+      Language.TokenPassing.GL
+      Language.TokenPassing.Reducer
+      Language.TokenPassing.Rules
       Language.Front.Parser
       Language.Front.Transformer.Lambda
       Language.Front.Transformer.LambdaScope
+      Language.Front.Transformer.TokenPassing
       Language.Lambda.Parser
       Language.Lambda.Reducer
   other-modules:
