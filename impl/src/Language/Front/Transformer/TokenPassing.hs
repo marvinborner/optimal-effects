@@ -27,9 +27,11 @@ data Name = Name
 
 transformTokenPassing :: Term -> Either String (Graph NodeLS)
 transformTokenPassing term = Right $ flip execGraph emptyGraph $ do
-  o <- newEdge
-  i <- newNode Initiator { out = o }
-  compile [] o term
+  o1 <- newEdge
+  i  <- newNode Initiator { out = o1 }
+  o2 <- newEdge
+  t  <- newNode Token { inp = o2, out = o1 }
+  compile [] o2 term
 
 toChurch :: Int -> Term
 toChurch = Abs "s" . Abs "z" . go
@@ -37,17 +39,17 @@ toChurch = Abs "s" . Abs "z" . go
   go 0 = Var "z"
   go n = App (Var "s") (go (n - 1))
 
-effectArity :: T.Text -> Int
-effectArity "readInt"  = 0
-effectArity "writeInt" = 1
-
 compile :: Environment -> Edge -> Term -> Compiler ()
 compile env p term = case term of
   App func arg -> do
     f <- newEdge
     x <- newEdge
     -- TODO: compile to rotated application
-    void $ newNode Applicator { inp = p, func = f, arg = x }
+    void $ newNode Redirector { portA     = f
+                              , portB     = p
+                              , portC     = x
+                              , direction = BottomRight
+                              }
     compile env f func
     compile env x arg
   Abs x e -> do
@@ -63,11 +65,11 @@ compile env p term = case term of
     compile env' p next
   Eff n    -> void $ newNode $ Effectful { inp = p, name = T.unpack n }
   Var name -> case env of -- TODO: recursion
-    []     -> void $ newNode (Effectful { inp = p, name = T.unpack name })
+    []     -> void $ newNode $ Effectful { inp = p, name = T.unpack name }
     n : ns -> if T.unpack name == symbol n
       then mergeEdges p =<< reference n
       else compile ns p term
-  Num n                -> compile env p (toChurch n)
+  Num n                -> compile env p $ toChurch n
   If clause true false -> compile env p $ App (App clause true) false
 
 bindName :: String -> Compiler (Edge, Name)

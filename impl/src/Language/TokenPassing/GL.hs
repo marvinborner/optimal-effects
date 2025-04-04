@@ -20,7 +20,6 @@ instance PortSpec NodeLS where
     in
       case node of
         Initiator{}  -> [sd s]
-        Applicator{} -> [sd n, sd s, sd e]
         Abstractor{} -> [sd n, sd s, sd e]
         Eraser{}     -> [sd n]
         Duplicator{} ->
@@ -28,8 +27,9 @@ instance PortSpec NodeLS where
           , (Vector2 (-0.6) (-0.5), s)
           , (Vector2 0.6 (-0.5)   , s)
           ]
-        Effectful{} -> [sd n]
-        Token{}     -> [sd n, sd s]
+        Redirector{} -> [sd n, sd s, sd e]
+        Effectful{}  -> [sd n]
+        Token{}      -> [sd n, sd s]
    where
     n = Vector2 0 1
     e = Vector2 1 0
@@ -54,8 +54,7 @@ instance Render n => Render (Wrapper n) where
 
 renderNode node = drawPorts node >> case node of
   Initiator{}  -> drawNode "I"
-  Applicator{} -> drawNode "@"
-  Abstractor{} -> drawNode "λ"
+  Abstractor{} -> drawNode "L"
   Eraser{}     -> drawNode ""
   Duplicator{} -> do
     GL.preservingMatrix $ GL.renderPrimitive GL.LineLoop $ do
@@ -63,17 +62,18 @@ renderNode node = drawPorts node >> case node of
       vertex2 (-1, -0.5)
       vertex2 (1, -0.5)
     renderString $ show $ level node
-  Effectful{} -> drawNode (name node)
-  Token{}     -> drawNode "T"
+  Redirector { direction = Top }        -> drawNode "@T"
+  Redirector { direction = BottomRight } -> drawNode "@R"
+  Redirector { direction = BottomLeft } -> drawNode "@L"
+  Effectful{}                           -> drawNode (name node)
+  Token{}                               -> drawNode "T"
 
 drawPorts :: NodeLS -> IO ()
 drawPorts n = sequence_
   [ drawPort (factor p) pos | (pos, p) <- positions `zip` ports ] where
   positions = relPortPos n
   ports     = inspect n
-  isLmo p = maybe False (p ==) (lmo n)
-  factor p | isLmo p   = 1.5
-           | p == pp n = 2.0
+  factor p | p == pp n = 2.0
            | otherwise = 1
 
 circle r1 r2 step = mapM_ vertex2 vs where

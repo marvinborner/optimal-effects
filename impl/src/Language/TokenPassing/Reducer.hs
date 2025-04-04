@@ -75,5 +75,11 @@ ruleTree = Branch
   , Leaf "Eliminate"  eliminateDuplicator
   , Leaf "Annihilate" annihilate
   , Leaf "Erase"      eraser
-  , Branch "Effective" [Leaf "Apply Effectful" applyEffectful]
+  , Branch
+    "Effective"
+    [ Leaf "Apply Effectful"   applyEffectful
+    , Leaf "Redirect Token"    redirectToken
+    , Leaf "Reflect Token"     reflectToken
+    , Leaf "Passthrough Right" passthroughRight
+    ]
   ]

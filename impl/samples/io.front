@@ -1,2 +1,12 @@
-x = readInt
-writeInt x
+{-
+effect readInt = "System.IO.readLn :: IO Int"
+effect writeInt a = "System.IO.putStrLn (show $a)"
+
+pure networkRequest = "fetchBLC 'https://example.com/foobar.blc?checksum=424242'"
+-}
+
+id x = x
+k x y = x
+
+x = readInt id
+k writeInt (5 2) x

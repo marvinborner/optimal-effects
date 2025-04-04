@@ -88,7 +88,7 @@ commute = do
 annihilate :: (View [Port] n, View NodeLS n) => Rule n
 annihilate = do
   n1 :-: n2 <- activePair
-  require (n1 == n2) -- TODO: ???
+  require (n1 == n2)
   let aux1 = pp n1 `delete` inspect n1
   let aux2 = pp n2 `delete` inspect n2
   rewire $ [ [a1, a2] | (a1, a2) <- aux1 `zip` aux2 ]
@@ -99,6 +99,39 @@ eliminateDuplicator = do
   Duplicator { inp = iD, out1 = o1, out2 = o2 } <- neighbour =<< previous
   require (iE == o1 || iE == o2)
   if iE == o1 then rewire [[iD, o2]] else rewire [[iD, o1]]
+
+reflectsToken Abstractor{} = True
+reflectsToken Effectful{}  = True
+reflectsToken _            = False
+
+reflectToken :: (View [Port] n, View NodeLS n) => Rule n
+reflectToken = do
+  reflector :-: tok@(Token { inp = iT, out = oT }) <- activePair
+  guard $ reflectsToken reflector
+  replace $ do
+    byNode $ reflector { inp = iT }
+    byNode $ tok { inp = oT, out = iT }
+
+redirectToken :: (View [Port] n, View NodeLS n) => Rule n
+redirectToken = do
+  red@(Redirector { portA = a, portB = b, portC = c, direction = r }) :-: tok@(Token { inp = iT, out = oT }) <-
+    activePair
+  case r of
+    BottomRight -> replace $ do
+      v <- byEdge -- tok-bl edge
+      byNode $ tok { inp = c, out = v }
+      byNode $ red { portB = oT, portC = v, direction = BottomLeft }
+    BottomLeft -> replace $ do
+      v <- byEdge
+      byNode $ tok { inp = v, out = b }
+      byNode $ red { portB = v, portC = oT, direction = Top }
+
+passthroughRight :: (View [Port] n, View NodeLS n) => Rule n
+passthroughRight = do
+  red@(Redirector { direction = BottomRight }) :-: n <- activePair
+  replace $ do
+    byNode $ red { direction = Top } -- everything else stays!
+    byNode n
 
 eraser :: (View [Port] n, View NodeLS n) => Rule n
 eraser = do
@@ -114,11 +147,11 @@ duplicate = do
 
 applyEffectful :: (View [Port] n, View NodeLS n) => Rule n
 applyEffectful = do
-  Applicator { inp = iA, arg = aA } :-: Effectful { inp = iE, name = nE } <-
+  Redirector { portB = iB, portC = aA, direction = Top } :-: Effectful { inp = iE, name = nE } <-
     activePair
   case runEffect nE aA of
     Nothing -> mempty
-    Just n' -> replace $ byNode $ Effectful { inp = iA, name = n' }
+    Just n' -> replace $ byNode $ Effectful { inp = iB, name = n' }
 
 runEffect "readInt" _ = Just $ unsafePerformIO $ do
   result <- readProcess

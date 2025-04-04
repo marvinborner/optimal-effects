@@ -1,6 +1,6 @@
 -- Scott
-cons x xs c e = c x xs
-nil c e = e
+-- cons x xs c e = c x xs
+-- nil c e = e
 
 -- repeat x = (
 --   loop = cons x loop
@@ -9,6 +9,7 @@ nil c e = e
 -- 
 -- repeat 5
 
+{-
 a + b = (
   add an bn = a an (b an bn)
   add
@@ -21,3 +22,8 @@ sum l = l (
 ) 0
 
 sum (cons 1 (cons 2 (cons 3 nil)))
+-}
+
+dup x = x x
+id y = y
+(5 id id) (dup id)
