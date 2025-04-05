@@ -104,6 +104,9 @@ reflectsToken Abstractor{} = True
 reflectsToken Effectful{}  = True
 reflectsToken _            = False
 
+isToken Token{} = True
+isToken _       = False
+
 reflectToken :: (View [Port] n, View NodeLS n) => Rule n
 reflectToken = do
   reflector :-: tok@(Token { inp = iT, out = oT }) <- activePair
@@ -129,6 +132,7 @@ redirectToken = do
 passthroughRight :: (View [Port] n, View NodeLS n) => Rule n
 passthroughRight = do
   red@(Redirector { direction = BottomRight }) :-: n <- activePair
+  guard $ not $ isToken n
   replace $ do
     byNode $ red { direction = Top } -- everything else stays!
     byNode n

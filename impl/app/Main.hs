@@ -49,7 +49,7 @@ pipeline input = do
   -- lambda <- Front.transformLambda front
   -- let lnf = traceShow $ Lambda.nf
   --       (trace (show front <> "\n\n\n" <> show lambda <> "\n\n\n") lambda)
-  Front.transformTokenPassing front
+  trace (show front) Front.transformTokenPassing front
 
 actions :: Args -> IO ()
 actions Args { _argMode = ArgEval } = do

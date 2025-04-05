@@ -39,12 +39,17 @@ toChurch = Abs "s" . Abs "z" . go
   go 0 = Var "z"
   go n = App (Var "s") (go (n - 1))
 
+transformDefs :: Term -> Term
+transformDefs = \case
+  Def n params body next ->
+    App (Abs n (transformDefs next)) (transformDefs body)
+  t -> t
+
 compile :: Environment -> Edge -> Term -> Compiler ()
-compile env p term = case term of
+compile env p term = case transformDefs term of
   App func arg -> do
     f <- newEdge
     x <- newEdge
-    -- TODO: compile to rotated application
     void $ newNode Redirector { portA     = f
                               , portB     = p
                               , portC     = x
@@ -57,12 +62,12 @@ compile env p term = case term of
     (v, name) <- bindName (T.unpack x)
     void $ newNode Abstractor { inp = p, body = b, var = v }
     compile (name : env) b e
-  Def n params body next -> do
-    (e, n') <- bindName (T.unpack n)
-    let env' = n' : env
-    let t    = foldr Abs body params
-    void $ compile env' e t
-    compile env' p next
+  -- Def n params body next -> do
+  --   (e, n') <- bindName (T.unpack n)
+  --   let env' = n' : env
+  --   let t    = foldr Abs body params
+  --   void $ compile env' e t
+  --   compile env' p next
   Eff n    -> void $ newNode $ Effectful { inp = p, name = T.unpack n }
   Var name -> case env of -- TODO: recursion
     []     -> void $ newNode $ Effectful { inp = p, name = T.unpack name }

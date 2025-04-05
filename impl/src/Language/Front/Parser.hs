@@ -122,6 +122,13 @@ singleton = ifElse <|> doBlock <|> number <|> try eff <|> var <|> parens block
 term :: Parser Term
 term = foldl1 App <$> some (lexeme $ try mixfix <|> singleton)
 
+-- | single term in definition-chain that's desugared to an empty definition
+-- | or just the term if there's nothing next
+toplevelTerm :: Parser Term
+toplevelTerm = do
+  t <- term
+  try (Def "_" [] t <$> block) <|> return t
+
 -- | single infix definition: <identifier> <operator> <identifier> = <term>
 -- TODO: make mixier
 mixDefinition :: Parser Term
@@ -146,7 +153,7 @@ definition = do
 
 -- | single "let..in" block: many definitions before a single term
 block :: Parser Term
-block = scn *> (try mixDefinition <|> try definition <|> term) <* scn
+block = scn *> (try mixDefinition <|> try definition <|> toplevelTerm) <* scn
 
 -- TODO: add preprocessor commands?
 program :: Parser Term

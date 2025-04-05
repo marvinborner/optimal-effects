@@ -24,6 +24,6 @@ sum l = l (
 sum (cons 1 (cons 2 (cons 3 nil)))
 -}
 
-dup x = x x
+writeInt 2
 id y = y
-(5 id id) (dup id)
+readInt id

@@ -18,6 +18,7 @@ instance Show Action where
   show (Unit t    ) = show t
   show (Bind n t a) = show n <> " <- " <> show t <> "; " <> show a
 
+-- we parse singleton expression as `Def _ [] e next`!
 data Term = Def Identifier [Identifier] Term Term
           | If Term Term Term
           | Var Identifier
