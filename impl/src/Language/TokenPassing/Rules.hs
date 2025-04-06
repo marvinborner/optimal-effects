@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables, FlexibleInstances #-}
 module Language.TokenPassing.Rules where
 
+import           Control.Applicative            ( optional )
 import           Control.Monad
 import           Data.List                      ( delete
                                                 , elemIndex
@@ -20,11 +21,6 @@ import           GraphRewriting.Layout.Wrapper as Layout
 import           GraphRewriting.Pattern
 import           GraphRewriting.Pattern.InteractionNet
 import           GraphRewriting.Rule
-
--- TODO: REMOVE THIS
-import           System.IO.Unsafe               ( unsafePerformIO )
-import           System.Process                 ( readProcess )
-import           Unsafe.Coerce                  ( unsafeCoerce )
 
 compileShare :: (View [Port] n, View NodeLS n) => Rule n
 compileShare = do
@@ -166,18 +162,7 @@ instance EffectApplicable (Layout.Wrapper NodeLS) where
   applyEffect = applyEffectfulNode
 
 applyEffectful :: (EffectApplicable n, View [Port] n, View NodeLS n) => Rule n
-applyEffectful = applyEffect
-
--- runEffect :: T.Text -> Port -> Maybe String
--- runEffect "readInt" _ = Just $ unsafePerformIO $ do
---   result <- readProcess
---     "zenity"
---     ["--entry", "--title=Input", "--text=Please enter some input:"]
---     ""
---   return result
--- runEffect "writeInt" n = Just $ unsafePerformIO $ do
---   result <- readProcess "zenity"
---                         ["--info", "--title=Output", "--text=" <> show n]
---                         ""
---   return result
--- runEffect n _ = error $ "invalid effect " <> T.unpack n
+applyEffectful = do
+  eff <- applyEffect
+  -- optional $ exhaustive compileShare -- TODO!
+  return eff

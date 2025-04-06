@@ -51,14 +51,27 @@ toChurch = Abs "s" . Abs "z" . go
   go 0 = Var "z"
   go n = App (Var "s") (go (n - 1))
 
+-- | Unwrap closure via App-Abs
+unwrapClosure :: [(Identifier, Term)] -> Term -> Term
+unwrapClosure []             term = term
+unwrapClosure ((n, t) : clo) term = App (Abs n (unwrapClosure clo term)) t
+
+-- | This does several def transformations
+--   1. desugar params into abstraction: `foo a b c = f` ~> `foo = \a b c.f`
+--   2. desugar next-chain of definitions into app-chain of abstractions
+--   3. apply itself to every (additionally abstracted) definition using a Rec recursion wrapper
+--   4. copy the entire environment upto this point to Rec since they're desugared to effects and can't bind to existing subnets
 transformDefs :: Term -> Term
-transformDefs = \case
-  Def n params body next ->
-    -- TODO: check for closedness, effects can *theoretically* not expand to open terms
-    let recced = App (Abs n $ transformDefs next)
-                     (Rec n recced $ transformDefs $ foldr Abs body params)
-    in  recced
-  t -> t
+transformDefs = go [] where
+  go :: [(Identifier, Term)] -> Term -> Term
+  go clo (Def n params body next) = do
+    -- TODO: check for closedness, effects can not expand to open terms
+    let body' = foldr Abs (unwrapClosure clo body) params
+    -- TODO: verify usage of body(')
+    let recced = App (Abs n $ go ((n, foldr Abs body params) : clo) next)
+                     (Rec n recced $ go clo body')
+    recced
+  go _ t = t
 
 replaceWrapped
   :: EnvironmentWrapped -> Edge -> Term -> Replace (Layout.Wrapper NodeLS) ()

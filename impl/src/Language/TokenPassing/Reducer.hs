@@ -76,10 +76,11 @@ ruleTree
   :: (EffectApplicable n, View NodeLS n, View [Port] n) => LabelledTree (Rule n)
 ruleTree = Branch
   "All"
-  [ Leaf "Duplicate"  duplicate
-  , Leaf "Eliminate"  eliminateDuplicator
-  , Leaf "Annihilate" annihilate
-  , Leaf "Erase"      eraser
+  [ Leaf "Duplicate"   duplicate
+  , Leaf "Eliminate"   eliminateDuplicator
+  , Leaf "Annihilate"  annihilate
+  , Leaf "Erase"       eraser
+  , Leaf "Multiplexer" compileShare
   , Branch
     "Effective"
     [ Leaf "Apply Effectful"   applyEffectful

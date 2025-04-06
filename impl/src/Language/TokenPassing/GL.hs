@@ -27,10 +27,11 @@ instance PortSpec NodeLS where
           , (Vector2 (-0.6) (-0.5), s)
           , (Vector2 0.6 (-0.5)   , s)
           ]
-        Redirector{} -> [sd n, sd s, sd e]
-        Effectful{}  -> [sd n]
-        Token{}      -> [sd n, sd s]
-        Data{}       -> [sd n]
+        Redirector{}  -> [sd n, sd s, sd e]
+        Effectful{}   -> [sd n]
+        Token{}       -> [sd n, sd s]
+        Data{}        -> [sd n]
+        Multiplexer{} -> [sd n, sd s]
    where
     n = Vector2 0 1
     e = Vector2 1 0
@@ -69,6 +70,7 @@ renderNode node = drawPorts node >> case node of
   Effectful{}                           -> drawNode $ T.unpack $ name node
   Token{}                               -> drawNode "T"
   Data { dat = d }                      -> drawNode $ "D=" <> d
+  Multiplexer{}                         -> drawNode "M"
 
 drawPorts :: NodeLS -> IO ()
 drawPorts n = sequence_
