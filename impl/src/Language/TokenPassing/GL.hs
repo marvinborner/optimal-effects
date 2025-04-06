@@ -7,12 +7,12 @@
 module Language.TokenPassing.GL
   () where
 
+import qualified Data.Text                     as T
 import           Data.TokenPassing
 import           GraphRewriting.GL.Render
 import           GraphRewriting.Layout.PortSpec
 import           GraphRewriting.Strategies.Control
 import qualified Graphics.UI.GLUT              as GL
-
 
 instance PortSpec NodeLS where
   portSpec node =
@@ -30,6 +30,7 @@ instance PortSpec NodeLS where
         Redirector{} -> [sd n, sd s, sd e]
         Effectful{}  -> [sd n]
         Token{}      -> [sd n, sd s]
+        Data{}       -> [sd n]
    where
     n = Vector2 0 1
     e = Vector2 1 0
@@ -55,7 +56,7 @@ instance Render n => Render (Wrapper n) where
 renderNode node = drawPorts node >> case node of
   Initiator{}  -> drawNode "I"
   Abstractor{} -> drawNode "L"
-  Eraser{}     -> drawNode ""
+  Eraser{}     -> drawNode "E"
   Duplicator{} -> do
     GL.preservingMatrix $ GL.renderPrimitive GL.LineLoop $ do
       vertex2 (0, 0.9)
@@ -65,8 +66,9 @@ renderNode node = drawPorts node >> case node of
   Redirector { direction = Top }        -> drawNode "@T"
   Redirector { direction = BottomRight } -> drawNode "@R"
   Redirector { direction = BottomLeft } -> drawNode "@L"
-  Effectful{}                           -> drawNode (name node)
+  Effectful{}                           -> drawNode $ T.unpack $ name node
   Token{}                               -> drawNode "T"
+  Data { dat = d }                      -> drawNode $ "D=" <> d
 
 drawPorts :: NodeLS -> IO ()
 drawPorts n = sequence_

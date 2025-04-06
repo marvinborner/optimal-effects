@@ -54,7 +54,7 @@ pipeline input = do
 actions :: Args -> IO ()
 actions Args { _argMode = ArgEval } = do
   program <- getContents
-  case pipeline (T.pack program) of
+  case pipeline $ T.pack program of
     Left  err  -> putStrLn err
     Right core -> TokenPassing.visualize core
     -- Right out ->

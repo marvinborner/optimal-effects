@@ -3,7 +3,7 @@
 -- Copyright (c) 2010, Jan Rochel
 -- Copyright (c) 2024, Marvin Borner
 
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, FlexibleInstances #-}
 module Language.TokenPassing.Rules where
 
 import           Control.Monad
@@ -12,9 +12,11 @@ import           Data.List                      ( delete
                                                 , transpose
                                                 )
 import           Data.Maybe                     ( fromJust )
+import qualified Data.Text                     as T
 import           Data.TokenPassing
 import           GraphRewriting.Graph.Read
 import           GraphRewriting.Graph.Write
+import           GraphRewriting.Layout.Wrapper as Layout
 import           GraphRewriting.Pattern
 import           GraphRewriting.Pattern.InteractionNet
 import           GraphRewriting.Rule
@@ -22,6 +24,7 @@ import           GraphRewriting.Rule
 -- TODO: REMOVE THIS
 import           System.IO.Unsafe               ( unsafePerformIO )
 import           System.Process                 ( readProcess )
+import           Unsafe.Coerce                  ( unsafeCoerce )
 
 compileShare :: (View [Port] n, View NodeLS n) => Rule n
 compileShare = do
@@ -102,6 +105,7 @@ eliminateDuplicator = do
 
 reflectsToken Abstractor{} = True
 reflectsToken Effectful{}  = True
+reflectsToken Data{}       = True
 reflectsToken _            = False
 
 isToken Token{} = True
@@ -149,23 +153,31 @@ duplicate = do
   Duplicator{} <- liftReader . inspectNode =<< previous
   return rewrite
 
-applyEffectful :: (View [Port] n, View NodeLS n) => Rule n
-applyEffectful = do
-  Redirector { portB = iB, portC = aA, direction = Top } :-: Effectful { inp = iE, name = nE } <-
+applyEffectfulNode :: Rule (Layout.Wrapper NodeLS)
+applyEffectfulNode = do
+  Redirector { portB = iB, portC = aA, direction = Top } :-: Effectful { inp = iE, name = nE, function = f } <-
     activePair
-  case runEffect nE aA of
-    Nothing -> mempty
-    Just n' -> replace $ byNode $ Effectful { inp = iB, name = n' }
+  replace $ f iB aA
 
-runEffect "readInt" _ = Just $ unsafePerformIO $ do
-  result <- readProcess
-    "zenity"
-    ["--entry", "--title=Input", "--text=Please enter some input:"]
-    ""
-  return result
-runEffect "writeInt" n = Just $ unsafePerformIO $ do
-  result <- readProcess "zenity"
-                        ["--info", "--title=Output", "--text=" <> show n]
-                        ""
-  return result
-runEffect n _ = error n
+class EffectApplicable n where
+  applyEffect :: Rule n
+
+instance EffectApplicable (Layout.Wrapper NodeLS) where
+  applyEffect = applyEffectfulNode
+
+applyEffectful :: (EffectApplicable n, View [Port] n, View NodeLS n) => Rule n
+applyEffectful = applyEffect
+
+-- runEffect :: T.Text -> Port -> Maybe String
+-- runEffect "readInt" _ = Just $ unsafePerformIO $ do
+--   result <- readProcess
+--     "zenity"
+--     ["--entry", "--title=Input", "--text=Please enter some input:"]
+--     ""
+--   return result
+-- runEffect "writeInt" n = Just $ unsafePerformIO $ do
+--   result <- readProcess "zenity"
+--                         ["--info", "--title=Output", "--text=" <> show n]
+--                         ""
+--   return result
+-- runEffect n _ = error $ "invalid effect " <> T.unpack n

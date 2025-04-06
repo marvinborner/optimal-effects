@@ -3,7 +3,7 @@
 -- Copyright (c) 2010, Jan Rochel
 -- Copyright (c) 2024, Marvin Borner
 
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances #-}
 
 module Language.TokenPassing.Reducer
   ( nf
@@ -11,6 +11,7 @@ module Language.TokenPassing.Reducer
   ) where
 
 import           Data.TokenPassing
+import           Data.Vector.V2                 ( Vector2(..) )
 import           GraphRewriting.GL.Render
 import           GraphRewriting.GL.UI          as UI
 import           GraphRewriting.Graph
@@ -28,6 +29,9 @@ import           GraphRewriting.Strategies.Control
 import           GraphRewriting.Strategies.LeftmostOutermost
 import           Language.TokenPassing.GL
 import           Language.TokenPassing.Rules
+
+-- TODO
+import           GraphRewriting.Pattern.InteractionNet
 
 instance Render n => Render (Layout.Wrapper n) where
   render = render . wrappee
@@ -68,7 +72,8 @@ visualize term = do
   let layoutGraph = Layout.wrapGraph hypergraph
   UI.run 50 id layoutStep layoutGraph ruleTree
 
-ruleTree :: (View NodeLS n, View [Port] n) => LabelledTree (Rule n)
+ruleTree
+  :: (EffectApplicable n, View NodeLS n, View [Port] n) => LabelledTree (Rule n)
 ruleTree = Branch
   "All"
   [ Leaf "Duplicate"  duplicate

@@ -3,7 +3,7 @@
 -- Copyright (c) 2010, Jan Rochel
 -- Copyright (c) 2024, Marvin Borner
 
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 
 module Language.Front.Transformer.TokenPassing
   ( transformTokenPassing
@@ -11,18 +11,30 @@ module Language.Front.Transformer.TokenPassing
 
 import           Control.Monad
 import           Data.Front
+import           Data.List                      ( find )
 import qualified Data.Text                     as T
 import           Data.TokenPassing
 import           GraphRewriting.Graph
 import           GraphRewriting.Graph.Write
+import           GraphRewriting.Layout.Wrapper as Layout
+import           GraphRewriting.Pattern         ( edge )
+import           GraphRewriting.Rule
+import           Language.TokenPassing.Effects
 
+import           Debug.Trace
 
 type Compiler = Rewrite NodeLS
 
 type Environment = [Name]
 data Name = Name
-  { symbol    :: String
+  { symbol    :: T.Text
   , reference :: Compiler Edge
+  }
+
+type EnvironmentWrapped = [NameWrapped]
+data NameWrapped = NameWrapped
+  { symbolWrapped    :: T.Text
+  , referenceWrapped :: Replace (Layout.Wrapper NodeLS) Edge
   }
 
 transformTokenPassing :: Term -> Either String (Graph NodeLS)
@@ -42,42 +54,123 @@ toChurch = Abs "s" . Abs "z" . go
 transformDefs :: Term -> Term
 transformDefs = \case
   Def n params body next ->
-    App (Abs n (transformDefs next)) (transformDefs body)
+    -- TODO: check for closedness, effects can *theoretically* not expand to open terms
+    let recced = App (Abs n $ transformDefs next)
+                     (Rec n recced $ transformDefs $ foldr Abs body params)
+    in  recced
   t -> t
 
-compile :: Environment -> Edge -> Term -> Compiler ()
-compile env p term = case transformDefs term of
-  App func arg -> do
-    f <- newEdge
-    x <- newEdge
-    void $ newNode Redirector { portA     = f
-                              , portB     = p
-                              , portC     = x
-                              , direction = BottomRight
-                              }
-    compile env f func
-    compile env x arg
-  Abs x e -> do
-    b         <- newEdge
-    (v, name) <- bindName (T.unpack x)
-    void $ newNode Abstractor { inp = p, body = b, var = v }
-    compile (name : env) b e
-  -- Def n params body next -> do
-  --   (e, n') <- bindName (T.unpack n)
-  --   let env' = n' : env
-  --   let t    = foldr Abs body params
-  --   void $ compile env' e t
-  --   compile env' p next
-  Eff n    -> void $ newNode $ Effectful { inp = p, name = T.unpack n }
-  Var name -> case env of -- TODO: recursion
-    []     -> void $ newNode $ Effectful { inp = p, name = T.unpack name }
-    n : ns -> if T.unpack name == symbol n
-      then mergeEdges p =<< reference n
-      else compile ns p term
-  Num n                -> compile env p $ toChurch n
-  If clause true false -> compile env p $ App (App clause true) false
+replaceWrapped
+  :: EnvironmentWrapped -> Edge -> Term -> Replace (Layout.Wrapper NodeLS) ()
+replaceWrapped env p term =
+  case
+      trace (show (symbolWrapped <$> env) <> " - " <> show term)
+            (transformDefs term)
+    of
+      App func arg -> do
+        f <- byEdge
+        x <- byEdge
+        byNode $ wrapNodeZero Redirector { portA     = f
+                                         , portB     = p
+                                         , portC     = x
+                                         , direction = BottomRight
+                                         }
+        replaceWrapped env f func
+        replaceWrapped env x arg
+      Abs n t -> do
+        b         <- byEdge
+        (v, name) <- bindNameWrapped n
+        void $ byNode $ wrapNodeZero Abstractor { inp = p, body = b, var = v }
+        replaceWrapped (name : env) b t
+      Rec n rec t -> do
+        (v, n') <- bindNameWrapped n
+        void $ byNode Effectful
+          { inp      = v
+          , name     = n
+          , function = \out arg -> do
+                         active <- byEdge
+                         replaceWrapped [] active rec
+                         byNode $ wrapNodeZero Redirector { portA     = active
+                                                          , portB     = out
+                                                          , portC     = arg
+                                                          , direction = Top
+                                                          }
+          }
+        replaceWrapped (n' : env) p t
+      Eff n -> void $ byNode $ wrapNodeZero $ Effectful
+        { inp      = p
+        , name     = n
+        , function = resolveEffect n
+        }
+      Var name -> case find (\n -> name == symbolWrapped n) env of
+        Just n  -> byWire p =<< referenceWrapped n
+        -- Nothing -> void $ newNode $ Effectful { inp = p, name = name, function = ??? }
+        Nothing -> error $ "invalid var " <> T.unpack name
+      Num n -> replaceWrapped env p $ toChurch n
+      If clause true false ->
+        replaceWrapped env p $ App (App clause true) false
 
-bindName :: String -> Compiler (Edge, Name)
+compile :: Environment -> Edge -> Term -> Compiler ()
+compile env p term =
+  case
+      trace (show (symbol <$> env) <> " - " <> show term) (transformDefs term)
+    of
+      App func arg -> do
+        f <- newEdge
+        x <- newEdge
+        newNode Redirector { portA     = f
+                           , portB     = p
+                           , portC     = x
+                           , direction = BottomRight
+                           }
+        compile env f func
+        compile env x arg
+      Abs n t -> do
+        b         <- newEdge
+        (v, name) <- bindName n
+        void $ newNode Abstractor { inp = p, body = b, var = v }
+        compile (name : env) b t
+      Rec n rec t -> do
+        (v, n') <- bindName n
+        void $ newNode Effectful
+          { inp      = v
+          , name     = n
+          , function = \out arg -> do
+                         active <- byEdge
+                         replaceWrapped [] active rec
+                         byNode $ wrapNodeZero Redirector { portA     = active
+                                                          , portB     = out
+                                                          , portC     = arg
+                                                          , direction = Top
+                                                          }
+          }
+        compile (n' : env) p t
+      Eff n -> void $ newNode $ Effectful { inp      = p
+                                          , name     = n
+                                          , function = resolveEffect n
+                                          }
+      Var name -> case find (\n -> name == symbol n) env of
+        Just n  -> mergeEdges p =<< reference n
+        -- Nothing -> void $ newNode $ Effectful { inp = p, name = name, function = ??? }
+        Nothing -> error $ "invalid var " <> T.unpack name
+      Num n                -> compile env p $ toChurch n
+      If clause true false -> compile env p $ App (App clause true) false
+
+bindNameWrapped
+  :: T.Text -> Replace (Layout.Wrapper NodeLS) (Edge, NameWrapped)
+bindNameWrapped sym = do
+  v <- byEdge
+  let sn = wrapNodeZero Multiplexer { out = v, ins = [] }
+  s <- byNode sn
+  let ref = do
+        e <- byEdge
+        -- modifyNode s
+        --   $ \s -> wrapNodeZero ((wrappee s) { ins = e : ins (wrappee s) })
+        byNode $ wrapNodeZero $ (wrappee sn) { ins = e : ins (wrappee sn) }
+        return e
+  return (v, NameWrapped { symbolWrapped = sym, referenceWrapped = ref })
+
+bindName :: T.Text -> Compiler (Edge, Name)
 bindName sym = do
   v <- newEdge
   s <- newNode Multiplexer { out = v, ins = [] }

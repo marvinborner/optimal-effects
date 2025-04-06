@@ -20,6 +20,7 @@ instance Show Action where
 
 -- we parse singleton expression as `Def _ [] e next`!
 data Term = Def Identifier [Identifier] Term Term
+          | Rec Identifier Term Term -- only used temporarily in compilation phase
           | If Term Term Term
           | Var Identifier
           | App Term Term
@@ -37,10 +38,12 @@ instance Show Term where
       <> show body
       <> "\n"
       <> show next
+  show (Rec n rec body) = "REC " <> T.unpack n
   show (If clause true false) =
     "if (" <> show clause <> ") " <> show true <> " else " <> show false
   show (Var n  ) = T.unpack n
   show (App a b) = "(" <> show a <> " " <> show b <> ")"
+  show (Abs n b) = "λ" <> T.unpack n <> "." <> show b
   show (Num n  ) = show n
   show (Eff n  ) = T.unpack n
   show (Do  as ) = "do (" <> show as <> ")"

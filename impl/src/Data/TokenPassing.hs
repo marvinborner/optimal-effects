@@ -7,27 +7,33 @@
 module Data.TokenPassing
   ( NodeLS(..)
   , AppDir(..)
+  , EffectFunction
   , pp
   ) where
 
+import qualified Data.Text                     as T
 import           Data.View
 import           GraphRewriting.Graph.Types
+import           GraphRewriting.Layout.Wrapper as Layout
 import           GraphRewriting.Pattern.InteractionNet
-import           GraphRewriting.Strategies.LeftmostOutermost
+import           GraphRewriting.Rule
 
 data AppDir = Top | BottomLeft | BottomRight
 
+-- | Effects *effectively* get two arguments, the output port and the argument port
+type EffectFunction = Edge -> Edge -> Replace (Layout.Wrapper NodeLS) ()
+
 -- | The signature of our graph
--- TODO: rotating applications
 data NodeLS
         = Initiator   {out :: Port}
         | Abstractor  {inp, body, var :: Port}
         | Eraser      {inp :: Port}
         | Duplicator  {level :: Int, inp, out1, out2 :: Port}
         | Multiplexer {out :: Port, ins :: [Port]} -- only intermediate compilation result
-        | Effectful   {inp :: Port, name :: String}
+        | Effectful   {inp :: Port, name :: T.Text, function :: EffectFunction}
         | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
         | Token       {inp, out :: Port}
+        | Data        {inp :: Port, dat :: String} -- TODO: custom eraser interaction?
 
 instance Eq NodeLS where
   Eraser{}                  == Eraser{}                       = True
@@ -45,6 +51,7 @@ instance View [Port] NodeLS where
     Effectful { inp = i }                          -> [i]
     Redirector { portA = a, portB = b, portC = c } -> [a, b, c]
     Token { inp = i, out = o }                     -> [i, o]
+    Data { inp = i }                               -> [i]
   update ports node = case node of
     Initiator{}  -> node { out = o } where [o] = ports
     Abstractor{} -> node { inp = i, body = b, var = v }
@@ -57,6 +64,7 @@ instance View [Port] NodeLS where
     Redirector{}  -> node { portA = a, portB = b, portC = c }
       where [a, b, c] = ports
     Token{} -> node { inp = i, out = o } where [i, o] = ports
+    Data{}  -> node { inp = i } where [i] = ports
 
 instance INet NodeLS where
   principalPort = pp
@@ -74,3 +82,4 @@ pp node = case node of
   Redirector { portB = b, direction = BottomRight } -> b
   Redirector { portC = c, direction = BottomLeft } -> c
   Token { inp = i }                            -> i
+  Data { inp = i }                             -> i

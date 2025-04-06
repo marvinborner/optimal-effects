@@ -24,7 +24,7 @@ import Data.Vector.V2
 -- | Wraps a value of type @w@, augmenting it with layout information
 data Wrapper w = Wrapper {wRot ∷ Rotation, wPos ∷ Position, wrappee ∷ w}
 
-instance View v n ⇒ View v (Wrapper n) where
+instance {-# INCOHERENT #-} View v n ⇒ View v (Wrapper n) where
 	inspect = inspect . wrappee
 	adjust f w = w {wrappee = adjust f $ wrappee w}
 
