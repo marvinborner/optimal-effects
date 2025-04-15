@@ -37,13 +37,16 @@ data NameWrapped = NameWrapped
   , referenceWrapped :: Replace (Layout.Wrapper NodeLS) Edge
   }
 
+data ApplicationStrategy = DoPure | DoStrict
+  deriving Eq
+
 transformTokenPassing :: Term -> Either String (Graph NodeLS)
 transformTokenPassing term = Right $ flip execGraph emptyGraph $ do
   o1 <- newEdge
   i  <- newNode Initiator { out = o1 }
   o2 <- newEdge
   t  <- newNode Token { inp = o2, out = o1 }
-  compile [] o2 term
+  compile [] DoStrict o2 term
 
 toChurch :: Int -> Term
 toChurch = Abs "s" . Abs "z" . go
@@ -66,50 +69,57 @@ transformDefs = go [] where
   go :: [(Identifier, Term)] -> Term -> Term
   go clo (Def n params body next) = do
     -- TODO: check for closedness, effects can not expand to open terms
-    let body' = foldr Abs (unwrapClosure clo body) params
-    -- TODO: verify usage of body(')
-    let recced = App (Abs n $ go ((n, foldr Abs body params) : clo) next)
-                     (Rec n recced $ go clo body')
+    let body'  = foldr Abs body params
+    let body'' = go clo body'
+    let recced = App (Abs n $ go ((n, body'') : clo) next) -- TODO: there may be a problem with body'' when it contains recursions?
+                     (Rec n (unwrapClosure clo recced) body'')
     recced
   go _ t = t
 
+-- TODO: somehow get rid of this awful code duplication
 replaceWrapped
-  :: EnvironmentWrapped -> Edge -> Term -> Replace (Layout.Wrapper NodeLS) ()
-replaceWrapped env p term =
+  :: EnvironmentWrapped
+  -> ApplicationStrategy
+  -> Edge
+  -> Term
+  -> Replace (Layout.Wrapper NodeLS) ()
+replaceWrapped env strategy p term =
   case
-      trace (show (symbolWrapped <$> env) <> " - " <> show term)
-            (transformDefs term)
+      trace
+        (show (symbolWrapped <$> env) <> " -w " <> show (transformDefs term))
+        (transformDefs term)
     of
       App func arg -> do
         f <- byEdge
         x <- byEdge
-        byNode $ wrapNodeZero Redirector { portA     = f
-                                         , portB     = p
-                                         , portC     = x
-                                         , direction = BottomRight
-                                         }
-        replaceWrapped env f func
-        replaceWrapped env x arg
+        byNode $ wrapNodeZero Redirector
+          { portA     = f
+          , portB     = p
+          , portC     = x
+          , direction = if strategy == DoPure then Top else BottomRight
+          }
+        replaceWrapped env strategy f func
+        replaceWrapped env strategy x arg
       Abs n t -> do
         b         <- byEdge
         (v, name) <- bindNameWrapped n
         void $ byNode $ wrapNodeZero Abstractor { inp = p, body = b, var = v }
-        replaceWrapped (name : env) b t
+        replaceWrapped (name : env) strategy b t
       Rec n rec t -> do
-        (v, n') <- bindNameWrapped n
+        (v, name) <- bindNameWrapped n
         void $ byNode Effectful
           { inp      = v
           , name     = n
           , function = \out arg -> do
                          active <- byEdge
-                         replaceWrapped [] active rec
+                         replaceWrapped [] strategy active rec
                          byNode $ wrapNodeZero Redirector { portA     = active
                                                           , portB     = out
                                                           , portC     = arg
                                                           , direction = Top
                                                           }
           }
-        replaceWrapped (n' : env) p t
+        replaceWrapped (name : env) strategy p t
       Eff n -> void $ byNode $ wrapNodeZero $ Effectful
         { inp      = p
         , name     = n
@@ -117,47 +127,54 @@ replaceWrapped env p term =
         }
       Var name -> case find (\n -> name == symbolWrapped n) env of
         Just n  -> byWire p =<< referenceWrapped n
+        -- Just n  -> do
+        --   r <- referenceWrapped n
+        --   replace $ void $ mergeEdges p r
         -- Nothing -> void $ newNode $ Effectful { inp = p, name = name, function = ??? }
         Nothing -> error $ "invalid var " <> T.unpack name
-      Num n -> replaceWrapped env p $ toChurch n
+      Num n -> replaceWrapped env strategy p $ toChurch n
       If clause true false ->
-        replaceWrapped env p $ App (App clause true) false
+        replaceWrapped env strategy p $ App (App clause true) false
+      Pure   t -> replaceWrapped env DoPure p t
+      Strict t -> replaceWrapped env DoStrict p t
 
-compile :: Environment -> Edge -> Term -> Compiler ()
-compile env p term =
+compile :: Environment -> ApplicationStrategy -> Edge -> Term -> Compiler ()
+compile env strategy p term =
   case
-      trace (show (symbol <$> env) <> " - " <> show term) (transformDefs term)
+      trace (show (symbol <$> env) <> " -c " <> show (transformDefs term))
+            (transformDefs term)
     of
       App func arg -> do
         f <- newEdge
         x <- newEdge
-        newNode Redirector { portA     = f
-                           , portB     = p
-                           , portC     = x
-                           , direction = BottomRight
-                           }
-        compile env f func
-        compile env x arg
+        newNode Redirector
+          { portA     = f
+          , portB     = p
+          , portC     = x
+          , direction = if strategy == DoPure then Top else BottomRight
+          }
+        compile env strategy f func
+        compile env strategy x arg
       Abs n t -> do
         b         <- newEdge
         (v, name) <- bindName n
         void $ newNode Abstractor { inp = p, body = b, var = v }
-        compile (name : env) b t
+        compile (name : env) strategy b t
       Rec n rec t -> do
-        (v, n') <- bindName n
+        (v, name) <- bindName n
         void $ newNode Effectful
           { inp      = v
           , name     = n
           , function = \out arg -> do
                          active <- byEdge
-                         replaceWrapped [] active rec
+                         replaceWrapped [] strategy active rec
                          byNode $ wrapNodeZero Redirector { portA     = active
                                                           , portB     = out
                                                           , portC     = arg
                                                           , direction = Top
                                                           }
           }
-        compile (n' : env) p t
+        compile (name : env) strategy p t
       Eff n -> void $ newNode $ Effectful { inp      = p
                                           , name     = n
                                           , function = resolveEffect n
@@ -166,8 +183,11 @@ compile env p term =
         Just n  -> mergeEdges p =<< reference n
         -- Nothing -> void $ newNode $ Effectful { inp = p, name = name, function = ??? }
         Nothing -> error $ "invalid var " <> T.unpack name
-      Num n                -> compile env p $ toChurch n
-      If clause true false -> compile env p $ App (App clause true) false
+      Num n -> compile env strategy p $ toChurch n
+      If clause true false ->
+        compile env strategy p $ App (App clause true) false
+      Pure   t -> compile env DoPure p t
+      Strict t -> compile env DoStrict p t
 
 bindNameWrapped
   :: T.Text -> Replace (Layout.Wrapper NodeLS) (Edge, NameWrapped)
@@ -177,8 +197,6 @@ bindNameWrapped sym = do
   s <- byNode sn
   let ref = do
         e <- byEdge
-        -- modifyNode s
-        --   $ \s -> wrapNodeZero ((wrappee s) { ins = e : ins (wrappee s) })
         byNode $ wrapNodeZero $ (wrappee sn) { ins = e : ins (wrappee sn) }
         return e
   return (v, NameWrapped { symbolWrapped = sym, referenceWrapped = ref })

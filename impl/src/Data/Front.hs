@@ -28,6 +28,8 @@ data Term = Def Identifier [Identifier] Term Term
           | Num Int
           | Eff Identifier
           | Do Action
+          | Pure Term
+          | Strict Term
 
 instance Show Term where
   show (Def n params body next) =
@@ -38,12 +40,14 @@ instance Show Term where
       <> show body
       <> "\n"
       <> show next
-  show (Rec n rec body) = "REC " <> T.unpack n
+  show (Rec n rec body) = "REC(" <> T.unpack n <> ")" <> show body
   show (If clause true false) =
     "if (" <> show clause <> ") " <> show true <> " else " <> show false
-  show (Var n  ) = T.unpack n
-  show (App a b) = "(" <> show a <> " " <> show b <> ")"
-  show (Abs n b) = "λ" <> T.unpack n <> "." <> show b
-  show (Num n  ) = show n
-  show (Eff n  ) = T.unpack n
-  show (Do  as ) = "do (" <> show as <> ")"
+  show (Var n    ) = T.unpack n
+  show (App a b  ) = "(" <> show a <> " " <> show b <> ")"
+  show (Abs n b  ) = "λ" <> T.unpack n <> "." <> show b
+  show (Num    n ) = show n
+  show (Eff    n ) = T.unpack n
+  show (Do     as) = "do (" <> show as <> ")"
+  show (Pure   t ) = "pure (" <> show t <> ")"
+  show (Strict t ) = "strict (" <> show t <> ")"

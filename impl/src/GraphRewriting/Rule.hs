@@ -14,6 +14,8 @@ import Control.Monad.State
 import Control.Monad.Reader
 import Data.List (nub)
 
+import qualified Data.IntMap as Map
+import qualified Data.IntSet as Set
 
 -- | A rewriting rule is defined as a 'Pattern' that returns a 'Rewrite'
 type Rule n = Pattern n (Rewrite n ())
@@ -103,6 +105,14 @@ byWire e1 e2 = byConnector [e1,e2]
 
 byConnector ∷ [Edge] → Replace n ()
 byConnector es = Replace $ return ((), [es])
+
+-- byEdgeMerge ∷ View [Port] n ⇒ Edge → Edge → Replace n ()
+-- byEdgeMerge e1 e2 = when (e1 ≢ e2) $ do
+-- 		ns ← attachedNodes e2
+-- 		sequence_ [byNode (adjust (map replacePort) n) | n ← ns]
+-- 		-- modifyEdgeMap $ Map.adjust (Set.union $ Set.fromList $ map nKey ns) (eKey e1)
+-- 		deleteEdge e2 >> return ()
+-- 	where replacePort p = if p ≡ e2 then e1 else p
 
 -- combinators ---------------------------------------------------------------
 

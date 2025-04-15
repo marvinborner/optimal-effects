@@ -103,6 +103,14 @@ doBlock = do
   action <- lexeme $ parens $ doAction -- TODO
   return $ Do action
 
+-- | pure effect
+pureTerm :: Parser Term
+pureTerm = Pure <$> (lexeme (string "pure") *> parens term)
+
+-- | pure effect
+strictTerm :: Parser Term
+strictTerm = Strict <$> (lexeme (string "strict") *> parens term)
+
 -- | single decimal number
 number :: Parser Term
 number = Num <$> lexeme L.decimal
@@ -116,7 +124,15 @@ eff :: Parser Term
 eff = Eff <$> (lexeme (string "readInt") <|> lexeme (string "writeInt"))
 
 singleton :: Parser Term
-singleton = ifElse <|> doBlock <|> number <|> try eff <|> var <|> parens block
+singleton =
+  pureTerm
+    <|> strictTerm
+    <|> ifElse
+    <|> doBlock
+    <|> number
+    <|> try eff
+    <|> var
+    <|> parens block
 
 -- | single term, potentially a left application fold of many
 term :: Parser Term

@@ -24,6 +24,41 @@ sum l = l (
 sum (cons 1 (cons 2 (cons 3 nil)))
 -}
 
+{-
 writeInt 2
 id y = y
 readInt id
+-}
+
+{-
+-- additional id is from \foo.foo!
+id x = x
+foo = foo (readInt id)
+foo
+-}
+
+{-
+id x = x
+num = readInt id
+dup y = y y y
+dup num
+-}
+
+{-
+-- until effectful normal form!
+id x = x
+20 id
+-}
+
+{-
+k x y = x
+k (readInt 0) (readInt 0)
+-}
+
+{-
+-- immediate reflection!
+k x = 20 readInt 0
+k
+-}
+
+pure (strict (20 readInt 0))
