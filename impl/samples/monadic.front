@@ -1,0 +1,16 @@
+foo = do (
+  x <- readInt
+  y <- writeInt 5
+  z <- readInt
+  foo
+)
+
+do (
+  a <- foo
+  writeInt a
+)
+
+-- do (
+--   x <- do ( 42 )
+--   writeInt x
+-- )

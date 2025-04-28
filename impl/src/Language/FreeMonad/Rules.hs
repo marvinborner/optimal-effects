@@ -99,36 +99,6 @@ eliminateDuplicator = do
   require (iE == o1 || iE == o2)
   if iE == o1 then rewire [[iD, o2]] else rewire [[iD, o1]]
 
--- reflectToken :: (View [Port] n, View NodeLS n) => Rule n
--- reflectToken = do
---   reflector :-: tok@(Token { inp = iT, out = oT }) <- activePair
---   guard $ reflectsToken reflector
---   replace $ do
---     byNode $ reflector { inp = iT }
---     byNode $ tok { inp = oT, out = iT }
-
--- redirectToken :: (View [Port] n, View NodeLS n) => Rule n
--- redirectToken = do
---   red@(Redirector { portA = a, portB = b, portC = c, direction = r }) :-: tok@(Token { inp = iT, out = oT }) <-
---     activePair
---   case r of
---     BottomRight -> replace $ do
---       v <- byEdge -- tok-bl edge
---       byNode $ tok { inp = c, out = v }
---       byNode $ red { portB = oT, portC = v, direction = BottomLeft }
---     BottomLeft -> replace $ do
---       v <- byEdge
---       byNode $ tok { inp = v, out = b }
---       byNode $ red { portB = v, portC = oT, direction = Top }
-
--- passthroughRight :: (View [Port] n, View NodeLS n) => Rule n
--- passthroughRight = do
---   red@(Redirector { direction = BottomRight }) :-: n <- activePair
---   guard $ not $ isToken n
---   replace $ do
---     byNode $ red { direction = Top } -- everything else stays!
---     byNode n
-
 eraser :: (View [Port] n, View NodeLS n) => Rule n
 eraser = do
   rewrite  <- commute
@@ -141,13 +111,29 @@ duplicate = do
   Duplicator{} <- liftReader . inspectNode =<< previous
   return rewrite
 
-initializeDataCurry :: (View [Port] n, View NodeLS n) => Rule n
-initializeDataCurry = do
+bindExecBind :: (View [Port] n, View NodeLS n) => Rule n
+bindExecBind = do
+  a@(BindN { exec = True }) :-: b@(BindN { exec = False }) <- activePair
+  replace $ do
+    byNode a
+    byNode $ b { exec = True }
+
+-- TODO: verify
+bindExecUnit :: (View [Port] n, View NodeLS n) => Rule n
+bindExecUnit = do
+  BindN { inp = p, next = n, var = v, exec = True } :-: UnitN { out = o, exec = False } <-
+    activePair
+  replace $ do
+    byWire p n
+    byWire o v
+
+initializeDataPartial :: (View [Port] n, View NodeLS n) => Rule n
+initializeDataPartial = do
   eff@(Effectful{}) :-: Applicator { inp = p, func = f, arg = a } <- activePair
   replace $ byNode $ eff { inp = a, cur = p }
 
-applyDataCurry :: (View [Port] n, View NodeLS n) => Rule n
-applyDataCurry = do
+applyDataPartial :: (View [Port] n, View NodeLS n) => Rule n
+applyDataPartial = do
   eff@(Effectful { args = as, cur = c }) :-: Data { inp = p, dat = d } <-
     activePair
   replace $ byNode $ eff { inp = c, args = d : as }

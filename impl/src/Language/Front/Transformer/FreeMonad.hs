@@ -58,11 +58,12 @@ transformDefs = go [] where
   go :: [(Identifier, Term)] -> Term -> Term
   go clo (Def n params body next) = do
     -- TODO: check for closedness, effects can not expand to open terms
-    let body'  = foldr Abs body params
-    let body'' = go clo body'
-    let recced = App (Abs n $ go ((n, body'') : clo) next) -- TODO: there may be a problem with body'' when it contains recursions?
-                     (Rec n (unwrapClosure clo recced) body'')
-    recced
+    let body' = foldr Abs body params
+    -- let body'' = go clo body'
+    -- let recced = App (Abs n $ go ((n, body'') : clo) next) -- TODO: there may be a problem with body'' when it contains recursions?
+    --                  (Rec n (unwrapClosure clo recced) body'')
+    -- recced
+    App (Abs n $ go clo next) body'
   go _ t = t
 
 -- TODO: somehow get rid of this awful code duplication

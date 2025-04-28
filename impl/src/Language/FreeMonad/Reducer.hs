@@ -83,11 +83,13 @@ ruleTree = Branch
   -- , Leaf "Multiplexer" compileShare
   , Branch
     "Effective"
-    [ Leaf "Initialize Bind Execution" initializeBindExec
-    , Leaf "Initialize Unit Execution" initializeUnitExec
-    , Leaf "Apply Bind Execution"      applyBindExec
-    , Leaf "Apply Unit Execution"      applyUnitExec
-    , Leaf "Initialize Curry"          initializeDataCurry
-    , Leaf "Apply Curry"               applyDataCurry
+    [ Leaf "Initialize Bind Execution"      initializeBindExec
+    , Leaf "Initialize Unit Execution"      initializeUnitExec
+    , Leaf "Apply Bind Execution"           applyBindExec
+    , Leaf "Apply Unit Execution"           applyUnitExec
+    , Leaf "Initialize Partial Application" initializeDataPartial
+    , Leaf "Apply Partially"                applyDataPartial
+    , Leaf "Bind Exec Bind"                 bindExecBind
+    , Leaf "Bind Exec Unit"                 bindExecUnit
     ]
   ]

@@ -24,6 +24,7 @@ source-repository head
 library
   exposed-modules:
       Data.LambdaScope
+      Data.FreeMonad
       Data.TokenPassing
       Data.Front
       Data.Lambda
@@ -59,10 +60,15 @@ library
       Language.TokenPassing.Reducer
       Language.TokenPassing.Rules
       Language.TokenPassing.Effects
+      Language.FreeMonad.GL
+      Language.FreeMonad.Reducer
+      Language.FreeMonad.Rules
+      Language.FreeMonad.Effects
       Language.Front.Parser
       Language.Front.Transformer.Lambda
       Language.Front.Transformer.LambdaScope
       Language.Front.Transformer.TokenPassing
+      Language.Front.Transformer.FreeMonad
       Language.Lambda.Parser
       Language.Lambda.Reducer
   other-modules:

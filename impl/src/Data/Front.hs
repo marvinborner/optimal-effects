@@ -12,7 +12,7 @@ import qualified Data.Text                     as T
 
 type Identifier = Text
 
-data Action = Unit Term | Bind Identifier Term Action
+data Action = Unit Term | Bind Identifier Term Action -- TODO: | Prim Term
 
 instance Show Action where
   show (Unit t    ) = show t
@@ -26,6 +26,7 @@ data Term = Def Identifier [Identifier] Term Term
           | App Term Term
           | Abs Identifier Term
           | Num Int
+          | Fork Term Term
           | Eff Identifier
           | Do Action
           | Pure Term
