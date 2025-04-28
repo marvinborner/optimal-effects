@@ -4,17 +4,17 @@
 -- Copyright (c) 2024, Marvin Borner
 
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables, FlexibleInstances #-}
-module Language.TokenPassing.Rules where
+module Language.FreeMonad.Rules where
 
 import           Control.Applicative            ( optional )
 import           Control.Monad
+import           Data.FreeMonad
 import           Data.List                      ( delete
                                                 , elemIndex
                                                 , transpose
                                                 )
 import           Data.Maybe                     ( fromJust )
 import qualified Data.Text                     as T
-import           Data.TokenPassing
 import           GraphRewriting.Graph.Read
 import           GraphRewriting.Graph.Write
 import           GraphRewriting.Layout.Wrapper as Layout
@@ -99,43 +99,35 @@ eliminateDuplicator = do
   require (iE == o1 || iE == o2)
   if iE == o1 then rewire [[iD, o2]] else rewire [[iD, o1]]
 
-reflectsToken Abstractor{} = True
-reflectsToken Effectful{}  = True
-reflectsToken Data{}       = True
-reflectsToken _            = False
+-- reflectToken :: (View [Port] n, View NodeLS n) => Rule n
+-- reflectToken = do
+--   reflector :-: tok@(Token { inp = iT, out = oT }) <- activePair
+--   guard $ reflectsToken reflector
+--   replace $ do
+--     byNode $ reflector { inp = iT }
+--     byNode $ tok { inp = oT, out = iT }
 
-isToken Token{} = True
-isToken _       = False
+-- redirectToken :: (View [Port] n, View NodeLS n) => Rule n
+-- redirectToken = do
+--   red@(Redirector { portA = a, portB = b, portC = c, direction = r }) :-: tok@(Token { inp = iT, out = oT }) <-
+--     activePair
+--   case r of
+--     BottomRight -> replace $ do
+--       v <- byEdge -- tok-bl edge
+--       byNode $ tok { inp = c, out = v }
+--       byNode $ red { portB = oT, portC = v, direction = BottomLeft }
+--     BottomLeft -> replace $ do
+--       v <- byEdge
+--       byNode $ tok { inp = v, out = b }
+--       byNode $ red { portB = v, portC = oT, direction = Top }
 
-reflectToken :: (View [Port] n, View NodeLS n) => Rule n
-reflectToken = do
-  reflector :-: tok@(Token { inp = iT, out = oT }) <- activePair
-  guard $ reflectsToken reflector
-  replace $ do
-    byNode $ reflector { inp = iT }
-    byNode $ tok { inp = oT, out = iT }
-
-redirectToken :: (View [Port] n, View NodeLS n) => Rule n
-redirectToken = do
-  red@(Redirector { portA = a, portB = b, portC = c, direction = r }) :-: tok@(Token { inp = iT, out = oT }) <-
-    activePair
-  case r of
-    BottomRight -> replace $ do
-      v <- byEdge -- tok-bl edge
-      byNode $ tok { inp = c, out = v }
-      byNode $ red { portB = oT, portC = v, direction = BottomLeft }
-    BottomLeft -> replace $ do
-      v <- byEdge
-      byNode $ tok { inp = v, out = b }
-      byNode $ red { portB = v, portC = oT, direction = Top }
-
-passthroughRight :: (View [Port] n, View NodeLS n) => Rule n
-passthroughRight = do
-  red@(Redirector { direction = BottomRight }) :-: n <- activePair
-  guard $ not $ isToken n
-  replace $ do
-    byNode $ red { direction = Top } -- everything else stays!
-    byNode n
+-- passthroughRight :: (View [Port] n, View NodeLS n) => Rule n
+-- passthroughRight = do
+--   red@(Redirector { direction = BottomRight }) :-: n <- activePair
+--   guard $ not $ isToken n
+--   replace $ do
+--     byNode $ red { direction = Top } -- everything else stays!
+--     byNode n
 
 eraser :: (View [Port] n, View NodeLS n) => Rule n
 eraser = do
@@ -149,20 +141,61 @@ duplicate = do
   Duplicator{} <- liftReader . inspectNode =<< previous
   return rewrite
 
-applyEffectfulNode :: Rule (Layout.Wrapper NodeLS)
-applyEffectfulNode = do
-  Redirector { portB = p, portC = arg, direction = Top } :-: Effectful { function = f } <-
+initializeDataCurry :: (View [Port] n, View NodeLS n) => Rule n
+initializeDataCurry = do
+  eff@(Effectful{}) :-: Applicator { inp = p, func = f, arg = a } <- activePair
+  replace $ byNode $ eff { inp = a, cur = p }
+
+applyDataCurry :: (View [Port] n, View NodeLS n) => Rule n
+applyDataCurry = do
+  eff@(Effectful { args = as, cur = c }) :-: Data { inp = p, dat = d } <-
     activePair
-  replace $ f p arg
+  replace $ byNode $ eff { inp = c, args = d : as }
+
+initializeUnitExec :: (View [Port] n, View NodeLS n) => Rule n
+initializeUnitExec = do
+  bind@(UnitN { exec = False }) :-: init@(Initiator{}) <- activePair
+  replace $ do
+    byNode $ bind { exec = True }
+    byNode init
+
+initializeBindExec :: (View [Port] n, View NodeLS n) => Rule n
+initializeBindExec = do
+  bind@(BindN { exec = False }) :-: init@(Initiator{}) <- activePair
+  replace $ do
+    byNode $ bind { exec = True }
+    byNode init
+
+applyUnitExec' :: Rule (Layout.Wrapper NodeLS)
+applyUnitExec' = do
+  UnitN { inp = p, exec = True } :-: Effectful { function = f, args = a } <-
+    activePair
+  replace $ f a p
+
+applyBindExec' :: Rule (Layout.Wrapper NodeLS)
+applyBindExec' = do
+  BindN { inp = i, next = n, var = p, exec = True } :-: Effectful { function = f, args = a } <-
+    activePair
+  replace $ do
+    byWire i n
+    f a p
 
 class EffectApplicable n where
-  applyEffect :: Rule n
+  applyUnitEffect :: Rule n
+  applyBindEffect :: Rule n
 
 instance EffectApplicable (Layout.Wrapper NodeLS) where
-  applyEffect = applyEffectfulNode
+  applyUnitEffect = applyUnitExec'
+  applyBindEffect = applyBindExec'
 
-applyEffectful :: (EffectApplicable n, View [Port] n, View NodeLS n) => Rule n
-applyEffectful = do
-  eff <- applyEffect
+applyUnitExec :: (EffectApplicable n, View [Port] n, View NodeLS n) => Rule n
+applyUnitExec = do
+  eff <- applyUnitEffect
+  -- optional $ exhaustive compileShare -- TODO!
+  return eff
+
+applyBindExec :: (EffectApplicable n, View [Port] n, View NodeLS n) => Rule n
+applyBindExec = do
+  eff <- applyBindEffect
   -- optional $ exhaustive compileShare -- TODO!
   return eff

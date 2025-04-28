@@ -93,7 +93,8 @@ doAction = try bind <|> unit
     name <- lexeme identifier
     _    <- symbol "<-"
     t    <- lexemeN term
-    return $ Bind name t (Unit (Var "foo"))
+    next <- doAction
+    return $ Bind name t next
   unit = Unit <$> lexemeN term
 
 -- | do block: do ( <doAction>+ )
