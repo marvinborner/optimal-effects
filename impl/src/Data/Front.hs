@@ -44,7 +44,7 @@ instance Show Term where
       <> show next
   show (Rec n rec body) = "REC(" <> T.unpack n <> ")" <> show body
   show (If clause true false) =
-    "if (" <> show clause <> ") " <> show true <> " else " <> show false
+    "if (" <> show clause <> ") then " <> show true <> " else " <> show false
   show (Var n    ) = T.unpack n
   show (App a b  ) = "(" <> show a <> " " <> show b <> ")"
   show (Abs n b  ) = "λ" <> T.unpack n <> "." <> show b

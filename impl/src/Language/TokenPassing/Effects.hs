@@ -24,6 +24,28 @@ wrapNodeZero n = Layout.Wrapper
   , wrappee = n
   }
 
+churchTrue :: Edge -> Replace (Layout.Wrapper NodeLS) ()
+churchTrue edge = do
+  tok <- byEdge -- send token back!
+  var <- byEdge
+  era <- byEdge
+  con <- byEdge
+  byNode $ wrapNodeZero Eraser { inp = era }
+  byNode $ wrapNodeZero Abstractor { inp = tok, body = con, var = var }
+  byNode $ wrapNodeZero Abstractor { inp = con, body = var, var = era }
+  byNode $ wrapNodeZero Token { inp = edge, out = tok }
+
+churchFalse :: Edge -> Replace (Layout.Wrapper NodeLS) ()
+churchFalse edge = do
+  tok <- byEdge -- send token back!
+  var <- byEdge
+  era <- byEdge
+  con <- byEdge
+  byNode $ wrapNodeZero Eraser { inp = era }
+  byNode $ wrapNodeZero Abstractor { inp = tok, body = con, var = era }
+  byNode $ wrapNodeZero Abstractor { inp = con, body = var, var = var }
+  byNode $ wrapNodeZero Token { inp = edge, out = tok }
+
 -- TODO: allow IO via monad
 -- TODO: passing without argument will execute unapplied, we should then just return the action node (??)
 resolveEffect :: T.Text -> EffectFunction
@@ -39,5 +61,9 @@ resolveEffect "writeInt" [NumberData n] edge = Just $ do
                                                               , dat = UnitData
                                                               }
   byNode $ wrapNodeZero Token { inp = edge, out = tok }
+resolveEffect "equal" [NumberData a, NumberData b] edge | a == b =
+  Just $ trace ("equal: " <> show a <> " " <> show b) $ churchTrue edge
+resolveEffect "equal" [NumberData a, NumberData b] edge | a /= b =
+  Just $ trace ("not equal: " <> show a <> " " <> show b) $ churchFalse edge
 resolveEffect f args _ =
   trace (T.unpack f <> " reflected " <> show args) Nothing -- bounce back

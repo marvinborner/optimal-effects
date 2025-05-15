@@ -90,6 +90,8 @@ ruleTree = Branch
     , Leaf "Initialize Partial Application" initializeDataPartial
     , Leaf "Apply Partially"                applyDataPartial
     , Leaf "Backpropagate Effectful"        backpropagateEffectful
+    , Leaf "Backpropagate Effectful 2"      backpropagateEffectful2
     , Leaf "Backpropagate Uneffectful"      backpropagateUneffectful
+    -- , Leaf "Backpropagate Uneffectful2"     backpropagateUneffectful2
     ]
   ]

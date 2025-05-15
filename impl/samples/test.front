@@ -48,6 +48,12 @@ id x = x
 20 id
 -}
 
+{-
+-- immediate reflection!
+k x = 20 readInt 0
+k
+-}
+
 -- we require a unit application since arguments are always applied to a token,
 -- and otherwise we could not substitute/pass the function without execution
 -- should read, read, and write, outputting only the first read
@@ -57,10 +63,21 @@ id x = x
 -- this works (and should) - great!
 -- writeInt (readInt (writeInt (readInt <>)))
 
-{-
--- immediate reflection!
-k x = 20 readInt 0
-k
--}
-
 -- pure (strict (20 readInt 0))
+
+-- works, but a disconnected dup remains (TODO)
+-- x = readInt
+-- y = x <>
+-- x <>
+
+-- actions are only executed when foo itself is forced
+foo = if (equal (readInt <>) 41)
+  then (
+    a x = (writeInt 1)
+    a
+  )
+  else (
+    b y = (writeInt 0)
+    b
+  )
+foo <>

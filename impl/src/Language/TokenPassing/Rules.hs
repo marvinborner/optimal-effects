@@ -146,6 +146,15 @@ backpropagateEffectful = do -- ==> there is an action somewhere inside b
     byNode $ a { direction = BottomRight }
     byNode b
 
+-- is this fully correct?
+backpropagateEffectful2 :: (View [Port] n, View NodeLS n) => Rule n
+backpropagateEffectful2 = do -- ==> there is an action somewhere inside b
+  a@(Redirector { direction = Top }) :-: b <- activePair
+  guard $ hasActionPotential b
+  replace $ do
+    byNode $ a { direction = BottomRight }
+    byNode b
+
 backpropagateUneffectful :: (View [Port] n, View NodeLS n) => Rule n
 backpropagateUneffectful = do -- ==> there is no immediate action potential in b
   a@(Redirector { direction = BottomLeft }) :-: b <- activePair

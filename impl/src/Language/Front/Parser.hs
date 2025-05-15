@@ -78,7 +78,8 @@ mixfix = do
 ifElse :: Parser Term
 ifElse = do
   _      <- symbol "if"
-  clause <- lexeme $ parens term
+  clause <- lexemeN $ parens term
+  _      <- symbol "then"
   true   <- lexemeN singleton
   _      <- symbol "else"
   false  <- lexeme singleton
@@ -127,7 +128,7 @@ var = Var <$> lexeme identifier
 
 -- | side effect (TODO: temporary!)
 eff :: Parser Term
-eff = Eff <$> (lexeme (string "readInt") <|> lexeme (string "writeInt"))
+eff = Eff <$> (symbol "readInt" <|> symbol "writeInt" <|> symbol "equal")
 
 singleton :: Parser Term
 singleton =
