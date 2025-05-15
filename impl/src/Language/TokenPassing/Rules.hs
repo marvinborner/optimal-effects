@@ -133,13 +133,35 @@ redirectToken = do
       byNode $ tok { inp = v, out = b }
       byNode $ red { portA = oT, portB = v, direction = Top }
 
-passthroughRight :: (View [Port] n, View NodeLS n) => Rule n
-passthroughRight = do
-  red@(Redirector { direction = BottomRight }) :-: n <- activePair
-  guard $ not $ isToken n
+hasActionPotential :: NodeLS -> Bool
+hasActionPotential (Redirector { direction = BottomRight }) = True
+hasActionPotential (Effectful{}) = True
+hasActionPotential _ = False
+
+backpropagateEffectful :: (View [Port] n, View NodeLS n) => Rule n
+backpropagateEffectful = do -- ==> there is an action somewhere inside b
+  a@(Redirector { direction = BottomLeft }) :-: b <- activePair
+  guard $ hasActionPotential b
   replace $ do
-    byNode $ red { direction = Top } -- everything else stays!
-    byNode n
+    byNode $ a { direction = BottomRight }
+    byNode b
+
+backpropagateUneffectful :: (View [Port] n, View NodeLS n) => Rule n
+backpropagateUneffectful = do -- ==> there is no immediate action potential in b
+  a@(Redirector { direction = BottomLeft }) :-: b <- activePair
+  guard $ not $ hasActionPotential b
+  replace $ do
+    byNode $ a { direction = Top }
+    byNode b
+
+-- TODO: WHAT IS THIS RULE?? does it have any use?
+-- passthroughRight :: (View [Port] n, View NodeLS n) => Rule n
+-- passthroughRight = do
+--   red@(Redirector { direction = BottomRight }) :-: n <- activePair
+--   guard $ not $ isToken n
+--   replace $ do
+--     byNode $ red { direction = Top } -- everything else stays!
+--     byNode n
 
 eraser :: (View [Port] n, View NodeLS n) => Rule n
 eraser = do

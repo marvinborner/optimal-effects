@@ -94,7 +94,7 @@ replaceWrapped env strategy p term =
           { portA     = f
           , portB     = p
           , portC     = x
-          , direction = if strategy == DoPure then Top else BottomRight
+          , direction = if strategy == DoPure then Top else BottomLeft
           }
         replaceWrapped env strategy f func
         replaceWrapped env strategy x arg
@@ -153,7 +153,7 @@ compile env strategy p term =
           { portA     = f
           , portB     = p
           , portC     = x
-          , direction = if strategy == DoPure then Top else BottomRight
+          , direction = if strategy == DoPure then Top else BottomLeft
           }
         compile env strategy f func
         compile env strategy x arg

@@ -86,8 +86,10 @@ ruleTree = Branch
     [ Leaf "Apply Effectful"                applyEffectful
     , Leaf "Redirect Token"                 redirectToken
     , Leaf "Reflect Token"                  reflectToken
-    , Leaf "Passthrough Right"              passthroughRight
+    -- , Leaf "Passthrough Right"              passthroughRight
     , Leaf "Initialize Partial Application" initializeDataPartial
     , Leaf "Apply Partially"                applyDataPartial
+    , Leaf "Backpropagate Effectful"        backpropagateEffectful
+    , Leaf "Backpropagate Uneffectful"      backpropagateUneffectful
     ]
   ]
