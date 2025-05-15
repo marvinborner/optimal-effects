@@ -83,9 +83,11 @@ ruleTree = Branch
   , Leaf "Multiplexer" compileShare
   , Branch
     "Effective"
-    [ Leaf "Apply Effectful"   applyEffectful
-    , Leaf "Redirect Token"    redirectToken
-    , Leaf "Reflect Token"     reflectToken
-    , Leaf "Passthrough Right" passthroughRight
+    [ Leaf "Apply Effectful"                applyEffectful
+    , Leaf "Redirect Token"                 redirectToken
+    , Leaf "Reflect Token"                  reflectToken
+    , Leaf "Passthrough Right"              passthroughRight
+    , Leaf "Initialize Partial Application" initializeDataPartial
+    , Leaf "Apply Partially"                applyDataPartial
     ]
   ]

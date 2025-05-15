@@ -26,6 +26,7 @@ data Term = Def Identifier [Identifier] Term Term
           | App Term Term
           | Abs Identifier Term
           | Num Int
+          | UnitV
           | Fork Term Term
           | Eff Identifier
           | Do Action
@@ -47,7 +48,8 @@ instance Show Term where
   show (Var n    ) = T.unpack n
   show (App a b  ) = "(" <> show a <> " " <> show b <> ")"
   show (Abs n b  ) = "λ" <> T.unpack n <> "." <> show b
-  show (Num    n ) = show n
+  show (Num n    ) = show n
+  show (UnitV    ) = "<>"
   show (Eff    n ) = T.unpack n
   show (Do     as) = "do (" <> show as <> ")"
   show (Pure   t ) = "pure (" <> show t <> ")"

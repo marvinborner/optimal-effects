@@ -32,14 +32,12 @@ readInt id
 
 {-
 -- additional id is from \foo.foo!
-id x = x
-foo = foo (readInt id)
+foo = foo (readInt <>)
 foo
 -}
 
 {-
-id x = x
-num = readInt id
+num = readInt <>
 dup y = y y y
 dup num
 -}
@@ -50,10 +48,14 @@ id x = x
 20 id
 -}
 
-{-
-k x y = x
-k (readInt 0) (readInt 0)
--}
+-- we require a unit application since arguments are always applied to a token,
+-- and otherwise we could not substitute/pass the function without execution
+-- should read, read, and write, outputting only the first read
+-- k x y = y
+-- k (writeInt (readInt <>)) (readInt <>)
+
+-- this works (and should) - great!
+-- writeInt (readInt (writeInt (readInt <>)))
 
 {-
 -- immediate reflection!
@@ -61,4 +63,4 @@ k x = 20 readInt 0
 k
 -}
 
-pure (strict (20 readInt 0))
+-- pure (strict (20 readInt 0))

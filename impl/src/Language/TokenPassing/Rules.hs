@@ -126,8 +126,12 @@ redirectToken = do
       byNode $ red { portB = oT, portC = v, direction = BottomLeft }
     BottomLeft -> replace $ do
       v <- byEdge
+      byNode $ tok { inp = a, out = v }
+      byNode $ red { portA = v, portC = oT, direction = Top }
+    Top -> replace $ do -- passthrough
+      v <- byEdge
       byNode $ tok { inp = v, out = b }
-      byNode $ red { portB = v, portC = oT, direction = Top }
+      byNode $ red { portA = oT, portB = v, direction = Top }
 
 passthroughRight :: (View [Port] n, View NodeLS n) => Rule n
 passthroughRight = do
@@ -149,11 +153,27 @@ duplicate = do
   Duplicator{} <- liftReader . inspectNode =<< previous
   return rewrite
 
+initializeDataPartial :: (View [Port] n, View NodeLS n) => Rule n
+initializeDataPartial = do
+  eff@(Effectful{}) :-: Redirector { portA = f, portB = p, portC = a, direction = Top } <-
+    activePair
+  replace $ byNode $ eff { inp = a, cur = p }
+
+applyDataPartial :: (View [Port] n, View NodeLS n) => Rule n
+applyDataPartial = do
+  eff@(Effectful { args = as, cur = c }) :-: Data { inp = p, dat = d } <-
+    activePair
+  replace $ byNode $ eff { inp = c, args = d : as }
+
 applyEffectfulNode :: Rule (Layout.Wrapper NodeLS)
 applyEffectfulNode = do
-  Redirector { portB = p, portC = arg, direction = Top } :-: Effectful { function = f } <-
+  tok@(Token { out = p, inp = i }) :-: eff@(Effectful { function = f, args = a }) <-
     activePair
-  replace $ f p arg
+  case f a p of
+    Just net -> replace net
+    Nothing  -> replace $ do -- not enough args: reconstruct/reflect
+      byNode tok { out = i, inp = p }
+      byNode eff
 
 class EffectApplicable n where
   applyEffect :: Rule n

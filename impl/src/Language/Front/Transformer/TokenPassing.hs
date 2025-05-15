@@ -48,12 +48,6 @@ transformTokenPassing term = Right $ flip execGraph emptyGraph $ do
   t  <- newNode Token { inp = o2, out = o1 }
   compile [] DoStrict o2 term
 
-toChurch :: Int -> Term
-toChurch = Abs "s" . Abs "z" . go
- where
-  go 0 = Var "z"
-  go n = App (Var "s") (go (n - 1))
-
 -- | Unwrap closure via App-Abs
 unwrapClosure :: [(Identifier, Term)] -> Term -> Term
 unwrapClosure []             term = term
@@ -69,11 +63,15 @@ transformDefs = go [] where
   go :: [(Identifier, Term)] -> Term -> Term
   go clo (Def n params body next) = do
     -- TODO: check for closedness, effects can not expand to open terms
-    let body'  = foldr Abs body params
-    let body'' = go clo body'
-    let recced = App (Abs n $ go ((n, body'') : clo) next) -- TODO: there may be a problem with body'' when it contains recursions?
-                     (Rec n (unwrapClosure clo recced) body'')
-    recced
+    -- let body'  = foldr Abs body params
+    -- let body'' = go clo body'
+    -- let recced = App (Abs n $ go ((n, body'') : clo) next) -- TODO: there may be a problem with body'' when it contains recursions?
+    --                  (Rec n (unwrapClosure clo recced) body'')
+    -- recced
+    -- TODO: recursion
+
+    let body' = foldr Abs body params
+    App (Abs n $ go clo next) body'
   go _ t = t
 
 -- TODO: somehow get rid of this awful code duplication
@@ -105,25 +103,27 @@ replaceWrapped env strategy p term =
         (v, name) <- bindNameWrapped n
         void $ byNode $ wrapNodeZero Abstractor { inp = p, body = b, var = v }
         replaceWrapped (name : env) strategy b t
-      Rec n rec t -> do
-        (v, name) <- bindNameWrapped n
-        void $ byNode Effectful
-          { inp      = v
-          , name     = n
-          , function = \out arg -> do
-                         active <- byEdge
-                         replaceWrapped [] strategy active rec
-                         byNode $ wrapNodeZero Redirector { portA     = active
-                                                          , portB     = out
-                                                          , portC     = arg
-                                                          , direction = Top
-                                                          }
-          }
-        replaceWrapped (name : env) strategy p t
+      -- Rec n rec t -> do
+      --   (v, name) <- bindNameWrapped n
+      --   void $ byNode Effectful
+      --     { inp      = v
+      --     , name     = n
+      --     , function = \out arg -> do
+      --                    active <- byEdge
+      --                    replaceWrapped [] strategy active rec
+      --                    byNode $ wrapNodeZero Redirector { portA     = active
+      --                                                     , portB     = out
+      --                                                     , portC     = arg
+      --                                                     , direction = Top
+      --                                                     }
+      --     }
+      --   replaceWrapped (name : env) strategy p t
       Eff n -> void $ byNode $ wrapNodeZero $ Effectful
         { inp      = p
+        , cur      = p
         , name     = n
         , function = resolveEffect n
+        , args     = []
         }
       Var name -> case find (\n -> name == symbolWrapped n) env of
         Just n  -> byWire p =<< referenceWrapped n
@@ -132,7 +132,9 @@ replaceWrapped env strategy p term =
         --   replace $ void $ mergeEdges p r
         -- Nothing -> void $ newNode $ Effectful { inp = p, name = name, function = ??? }
         Nothing -> error $ "invalid var " <> T.unpack name
-      Num n -> replaceWrapped env strategy p $ toChurch n
+      Num n ->
+        void $ byNode $ wrapNodeZero $ Data { inp = p, dat = NumberData n }
+      UnitV -> void $ byNode $ wrapNodeZero $ Data { inp = p, dat = UnitData }
       If clause true false ->
         replaceWrapped env strategy p $ App (App clause true) false
       Pure   t -> replaceWrapped env DoPure p t
@@ -160,30 +162,33 @@ compile env strategy p term =
         (v, name) <- bindName n
         void $ newNode Abstractor { inp = p, body = b, var = v }
         compile (name : env) strategy b t
-      Rec n rec t -> do
-        (v, name) <- bindName n
-        void $ newNode Effectful
-          { inp      = v
-          , name     = n
-          , function = \out arg -> do
-                         active <- byEdge
-                         replaceWrapped [] strategy active rec
-                         byNode $ wrapNodeZero Redirector { portA     = active
-                                                          , portB     = out
-                                                          , portC     = arg
-                                                          , direction = Top
-                                                          }
-          }
-        compile (name : env) strategy p t
+      -- Rec n rec t -> do
+      --   (v, name) <- bindName n
+      --   void $ newNode Effectful
+      --     { inp      = v
+      --     , name     = n
+      --     , function = \out arg -> do
+      --                    active <- byEdge
+      --                    replaceWrapped [] strategy active rec
+      --                    byNode $ wrapNodeZero Redirector { portA     = active
+      --                                                     , portB     = out
+      --                                                     , portC     = arg
+      --                                                     , direction = Top
+      --                                                     }
+      --     }
+      --   compile (name : env) strategy p t
       Eff n -> void $ newNode $ Effectful { inp      = p
+                                          , cur      = p
                                           , name     = n
                                           , function = resolveEffect n
+                                          , args     = []
                                           }
       Var name -> case find (\n -> name == symbol n) env of
         Just n  -> mergeEdges p =<< reference n
         -- Nothing -> void $ newNode $ Effectful { inp = p, name = name, function = ??? }
         Nothing -> error $ "invalid var " <> T.unpack name
-      Num n -> compile env strategy p $ toChurch n
+      Num n -> void $ newNode $ Data { inp = p, dat = NumberData n }
+      UnitV -> void $ newNode $ Data { inp = p, dat = UnitData }
       If clause true false ->
         compile env strategy p $ App (App clause true) false
       Pure   t -> compile env DoPure p t

@@ -15,7 +15,7 @@ import           GraphRewriting.Pattern
 import           GraphRewriting.Pattern.InteractionNet
 import           GraphRewriting.Rule
 
-import Debug.Trace
+import           Debug.Trace
 
 wrapNodeZero :: NodeLS -> Layout.Wrapper NodeLS
 wrapNodeZero n = Layout.Wrapper
@@ -24,21 +24,20 @@ wrapNodeZero n = Layout.Wrapper
   , wrappee = n
   }
 
--- readArg :: View [Port] n => Edge -> Rewrite n ()
--- readArg arg = do
---   [Data { dat = dat }] <- attachedNodes arg
---   return dat
-
--- TODO: read-back arg to some representation (traversal)
 -- TODO: allow IO via monad
+-- TODO: passing without argument will execute unapplied, we should then just return the action node (??)
 resolveEffect :: T.Text -> EffectFunction
-resolveEffect t = trace ("EFFECT: " <> T.unpack t) go t
-  where
-  go "readInt" edge arg = do
-    byNode $ wrapNodeZero Data { inp = edge, dat = "42" }
-    byNode $ wrapNodeZero Eraser { inp = arg }
-  go "writeInt" edge arg = do
-    -- arg' <- readArg
-    byNode $ wrapNodeZero Data { inp = edge, dat = "42" }
-    byNode $ wrapNodeZero Eraser { inp = arg }
-  go _ _ _ = error "invalid effect"
+resolveEffect "readInt" [UnitData] edge = Just $ do
+  tok <- byEdge -- send token back!
+  trace "readInt" $ byNode $ wrapNodeZero Data { inp = tok
+                                               , dat = NumberData 42
+                                               }
+  byNode $ wrapNodeZero Token { inp = edge, out = tok }
+resolveEffect "writeInt" [NumberData n] edge = Just $ do
+  tok <- byEdge -- send token back!
+  trace ("writeInt: " <> show n) $ byNode $ wrapNodeZero Data { inp = tok
+                                                              , dat = UnitData
+                                                              }
+  byNode $ wrapNodeZero Token { inp = edge, out = tok }
+resolveEffect f args _ =
+  trace (T.unpack f <> " reflected " <> show args) Nothing -- bounce back

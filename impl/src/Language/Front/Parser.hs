@@ -11,6 +11,7 @@ import           Data.Front                     ( Action(..)
                                                 , Identifier
                                                 , Term(..)
                                                 )
+import           Data.Functor                   ( ($>) )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Void
@@ -116,6 +117,10 @@ strictTerm = Strict <$> (lexeme (string "strict") *> parens term)
 number :: Parser Term
 number = Num <$> lexeme L.decimal
 
+-- | Unit value
+unitV :: Parser Term
+unitV = lexeme (string "<>") $> UnitV
+
 -- | single identifier (function / parameter binding)
 var :: Parser Term
 var = Var <$> lexeme identifier
@@ -131,6 +136,7 @@ singleton =
     <|> ifElse
     <|> doBlock
     <|> number
+    <|> unitV
     <|> try eff
     <|> var
     <|> parens block

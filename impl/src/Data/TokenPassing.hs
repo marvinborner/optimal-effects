@@ -7,6 +7,7 @@
 module Data.TokenPassing
   ( NodeLS(..)
   , AppDir(..)
+  , EffectData(..)
   , EffectFunction
   , pp
   ) where
@@ -20,8 +21,12 @@ import           GraphRewriting.Rule
 
 data AppDir = Top | BottomLeft | BottomRight
 
+data EffectData = StringData String | NumberData Int | UnitData
+  deriving Show
+
 -- | Effects *effectively* get two arguments, the output port and the argument port
-type EffectFunction = Edge -> Edge -> Replace (Layout.Wrapper NodeLS) ()
+type EffectFunction
+  = [EffectData] -> Edge -> Maybe (Replace (Layout.Wrapper NodeLS) ())
 
 -- | The signature of our graph
 data NodeLS
@@ -30,10 +35,11 @@ data NodeLS
         | Eraser      {inp :: Port}
         | Duplicator  {level :: Int, inp, out1, out2 :: Port}
         | Multiplexer {out :: Port, ins :: [Port]} -- only intermediate compilation result
-        | Effectful   {inp :: Port, name :: T.Text, function :: EffectFunction}
         | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
         | Token       {inp, out :: Port}
-        | Data        {inp :: Port, dat :: String} -- TODO: custom eraser interaction?
+        -- technically effectful+curry is a different node (curry connection is a temporary state)
+        | Effectful   {inp, cur :: Port, name :: T.Text, function :: EffectFunction, args :: [EffectData]}
+        | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
 
 instance Eq NodeLS where
   Eraser{}                  == Eraser{}                       = True
@@ -48,7 +54,7 @@ instance View [Port] NodeLS where
     Eraser { inp = i }                             -> [i]
     Duplicator { inp = i, out1 = o1, out2 = o2 }   -> [i, o1, o2]
     Multiplexer { out = o, ins = is }              -> o : is
-    Effectful { inp = i }                          -> [i]
+    Effectful { inp = i, cur = c }                 -> [i, c]
     Redirector { portA = a, portB = b, portC = c } -> [a, b, c]
     Token { inp = i, out = o }                     -> [i, o]
     Data { inp = i }                               -> [i]
@@ -60,7 +66,7 @@ instance View [Port] NodeLS where
     Duplicator{} -> node { inp = i, out1 = o1, out2 = o2 }
       where [i, o1, o2] = ports
     Multiplexer{} -> node { out = o, ins = is } where o : is = ports
-    Effectful{}   -> node { inp = i } where [i] = ports
+    Effectful{}   -> node { inp = i, cur = c } where [i, c] = ports
     Redirector{}  -> node { portA = a, portB = b, portC = c }
       where [a, b, c] = ports
     Token{} -> node { inp = i, out = o } where [i, o] = ports
