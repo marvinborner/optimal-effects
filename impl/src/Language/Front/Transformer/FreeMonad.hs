@@ -100,10 +100,11 @@ replaceWrapped env p term =
       --                                        }
       --     }
       --   replaceWrapped (name : env) p t
-      Eff n -> void $ byNode $ wrapNodeZero $ Effectful
+      Eff a n -> void $ byNode $ wrapNodeZero $ Effectful
         { inp      = p
         , cur      = p
         , name     = n
+        , arity    = a
         , function = resolveEffect n
         , args     = []
         }
@@ -151,12 +152,13 @@ compile env p term =
       --                                        }
       --     }
       --   compile (name : env) p t
-      Eff n -> void $ newNode $ Effectful { inp      = p
-                                          , cur      = p -- TODO: should be empty
-                                          , name     = n
-                                          , function = resolveEffect n
-                                          , args     = []
-                                          }
+      Eff a n -> void $ newNode $ Effectful { inp      = p
+                                            , cur      = p -- TODO: should be empty
+                                            , name     = n
+                                            , arity    = a
+                                            , function = resolveEffect n
+                                            , args     = []
+                                            }
       Var name -> case find (\n -> name == symbol n) env of
         Just n  -> mergeEdges p =<< reference n
         -- Nothing -> void $ newNode $ Effectful { inp = p, name = name, function = ??? }

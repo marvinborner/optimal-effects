@@ -67,7 +67,7 @@ renderNode node = drawPorts node >> case node of
   Redirector { direction = Top }        -> drawNode "@T"
   Redirector { direction = BottomRight } -> drawNode "@R"
   Redirector { direction = BottomLeft } -> drawNode "@L"
-  Effectful{}                           -> drawNode $ T.unpack $ name node
+  Effectful { name = n, arity = a }     -> drawNode $ T.unpack n <> show a
   Token{}                               -> drawNode "T"
   Data { dat = UnitData }               -> drawNode "()"
   Data { dat = StringData s }           -> drawNode $ "D=" <> s

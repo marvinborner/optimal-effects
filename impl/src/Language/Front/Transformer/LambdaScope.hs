@@ -38,10 +38,6 @@ toChurch = Abs "s" . Abs "z" . go
   go 0 = Var "z"
   go n = App (Var "s") (go (n - 1))
 
-effectArity :: T.Text -> Int
-effectArity "readInt"  = 0
-effectArity "writeInt" = 1
-
 compile :: Environment -> Edge -> Term -> Compiler ()
 compile env p term = case term of
   App func arg -> do
@@ -61,12 +57,12 @@ compile env p term = case term of
     let t    = foldr Abs body params
     void $ compile env' e t
     compile env' p next
-  Eff n -> void $ newNode $ Effectful { inp   = p
-                                      , args  = []
-                                      , arity = effectArity n
-                                      , lmop  = 0
-                                      , name  = T.unpack n
-                                      }
+  Eff a n -> void $ newNode $ Effectful { inp   = p
+                                        , args  = []
+                                        , arity = a
+                                        , lmop  = 0
+                                        , name  = T.unpack n
+                                        }
   Var name -> case env of
     [] ->
       void $ newNode (Constant { inp = p, name = T.unpack name, args = [] })

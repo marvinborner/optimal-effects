@@ -99,10 +99,10 @@ eliminateDuplicator = do
   require (iE == o1 || iE == o2)
   if iE == o1 then rewire [[iD, o2]] else rewire [[iD, o1]]
 
-reflectsToken Abstractor{} = True
-reflectsToken Effectful{}  = True
-reflectsToken Data{}       = True
-reflectsToken _            = False
+reflectsToken Abstractor{}            = True
+reflectsToken Effectful { arity = a } = a > 0
+reflectsToken Data{}                  = True
+reflectsToken _                       = False
 
 isToken Token{} = True
 isToken _       = False
@@ -133,10 +133,12 @@ redirectToken = do
       byNode $ tok { inp = v, out = b }
       byNode $ red { portA = oT, portB = v, direction = Top }
 
+-- TODO: should this basically almost be !reflectsToken ??
 hasActionPotential :: NodeLS -> Bool
 hasActionPotential (Redirector { direction = BottomRight }) = True
 hasActionPotential (Effectful{}) = True
-hasActionPotential _ = False
+hasActionPotential (Data{}     ) = False -- Must be False or possible loops with T-App
+hasActionPotential _             = False
 
 backpropagateEffectful :: (View [Port] n, View NodeLS n) => Rule n
 backpropagateEffectful = do -- ==> there is an action somewhere inside b
@@ -146,7 +148,7 @@ backpropagateEffectful = do -- ==> there is an action somewhere inside b
     byNode $ a { direction = BottomRight }
     byNode b
 
--- is this fully correct?
+-- TODO: is this fully correct?
 backpropagateEffectful2 :: (View [Port] n, View NodeLS n) => Rule n
 backpropagateEffectful2 = do -- ==> there is an action somewhere inside b
   a@(Redirector { direction = Top }) :-: b <- activePair
@@ -162,6 +164,17 @@ backpropagateUneffectful = do -- ==> there is no immediate action potential in b
   replace $ do
     byNode $ a { direction = Top }
     byNode b
+
+-- is this fully correct?
+-- THIS is certisfiably wrong, can cause infinite loops
+-- TODO: is something like this still required somehow?
+-- backpropagateUneffectful2 :: (View [Port] n, View NodeLS n) => Rule n
+-- backpropagateUneffectful2 = do -- ==> there is no immediate action potential in b
+--   a@(Redirector { direction = Top }) :-: b <- activePair
+--   guard $ not $ hasActionPotential b
+--   replace $ do
+--     byNode $ a { direction = BottomLeft }
+--     byNode b
 
 -- TODO: WHAT IS THIS RULE?? does it have any use?
 -- passthroughRight :: (View [Port] n, View NodeLS n) => Rule n
@@ -186,25 +199,23 @@ duplicate = do
 
 initializeDataPartial :: (View [Port] n, View NodeLS n) => Rule n
 initializeDataPartial = do
-  eff@(Effectful{}) :-: Redirector { portA = f, portB = p, portC = a, direction = Top } <-
+  eff@(Effectful { arity = n }) :-: Redirector { portA = f, portB = p, portC = a, direction = Top } <-
     activePair
+  guard $ n > 0
   replace $ byNode $ eff { inp = a, cur = p }
 
 applyDataPartial :: (View [Port] n, View NodeLS n) => Rule n
 applyDataPartial = do
-  eff@(Effectful { args = as, cur = c }) :-: Data { inp = p, dat = d } <-
+  eff@(Effectful { args = as, cur = c, arity = n }) :-: Data { inp = p, dat = d } <-
     activePair
-  replace $ byNode $ eff { inp = c, args = d : as }
+  guard $ n > 0
+  replace $ byNode $ eff { inp = c, args = d : as, arity = n - 1 }
 
 applyEffectfulNode :: Rule (Layout.Wrapper NodeLS)
 applyEffectfulNode = do
-  tok@(Token { out = p, inp = i }) :-: eff@(Effectful { function = f, args = a }) <-
+  tok@(Token { out = p, inp = i }) :-: eff@(Effectful { function = f, args = a, arity = 0 }) <-
     activePair
-  case f a p of
-    Just net -> replace net
-    Nothing  -> replace $ do -- not enough args: reconstruct/reflect
-      byNode tok { out = i, inp = p }
-      byNode eff
+  replace $ f a p
 
 class EffectApplicable n where
   applyEffect :: Rule n

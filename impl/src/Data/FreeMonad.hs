@@ -29,7 +29,7 @@ data NodeLS
         | Duplicator  {level :: Int, inp, out1, out2 :: Port}
         | Multiplexer {out :: Port, ins :: [Port]} -- only intermediate compilation result
         -- technically effectful+curry is a different node (curry connection is a temporary state)
-        | Effectful   {inp, cur :: Port, name :: T.Text, function :: EffectFunction, args :: [String]}
+        | Effectful   {inp, cur :: Port, name :: T.Text, arity :: Int, function :: EffectFunction, args :: [String]}
         | Data        {inp :: Port, dat :: String} -- TODO: custom eraser interaction?
         | BindN       {inp, arg, next, var :: Port, exec :: Bool}
         | UnitN       {inp, out :: Port, exec :: Bool}

@@ -126,9 +126,18 @@ unitV = lexeme (string "<>") $> UnitV
 var :: Parser Term
 var = Var <$> lexeme identifier
 
+-- | arity of action (TODO: even more temporary)
+actionArity :: Text -> Int
+actionArity "readInt"  = 1
+actionArity "writeInt" = 1
+actionArity "equal"    = 2
+actionArity _          = -1
+
 -- | side effect (TODO: temporary!)
 eff :: Parser Term
-eff = Eff <$> (symbol "readInt" <|> symbol "writeInt" <|> symbol "equal")
+eff =
+  (\x -> Eff (actionArity x) x)
+    <$> (symbol "readInt" <|> symbol "writeInt" <|> symbol "equal")
 
 singleton :: Parser Term
 singleton =

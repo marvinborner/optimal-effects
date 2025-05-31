@@ -26,7 +26,7 @@ data EffectData = StringData String | NumberData Int | UnitData
 
 -- | Effects *effectively* get two arguments, the output port and the argument port
 type EffectFunction
-  = [EffectData] -> Edge -> Maybe (Replace (Layout.Wrapper NodeLS) ())
+  = [EffectData] -> Edge -> Replace (Layout.Wrapper NodeLS) ()
 
 -- | The signature of our graph
 data NodeLS
@@ -38,7 +38,7 @@ data NodeLS
         | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
         | Token       {inp, out :: Port}
         -- technically effectful+curry is a different node (curry connection is a temporary state)
-        | Effectful   {inp, cur :: Port, name :: T.Text, function :: EffectFunction, args :: [EffectData]}
+        | Effectful   {inp, cur :: Port, name :: T.Text, arity :: Int, function :: EffectFunction, args :: [EffectData]}
         | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
 
 instance Eq NodeLS where

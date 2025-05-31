@@ -55,10 +55,10 @@ isRecursive n (If clause true false) =
   isRecursive n clause || isRecursive n true || isRecursive n false
 isRecursive n (Var n') | n == n'   = True
                        | otherwise = False
-isRecursive n (App a b     ) = isRecursive n a || isRecursive n b
-isRecursive _ (Num _       ) = False
-isRecursive _ (Eff _       ) = False
-isRecursive n (Do  (Unit t)) = isRecursive n t
+isRecursive n (App a b    ) = isRecursive n a || isRecursive n b
+isRecursive _ (Num _      ) = False
+isRecursive _ (Eff _ _    ) = False
+isRecursive n (Do (Unit t)) = isRecursive n t
 isRecursive n (Do (Bind n' t a))
   | n == n'   = isRecursive n t
   | otherwise = isRecursive n t || isRecursive n (Do a)

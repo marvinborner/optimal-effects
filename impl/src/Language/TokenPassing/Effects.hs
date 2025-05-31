@@ -49,21 +49,20 @@ churchFalse edge = do
 -- TODO: allow IO via monad
 -- TODO: passing without argument will execute unapplied, we should then just return the action node (??)
 resolveEffect :: T.Text -> EffectFunction
-resolveEffect "readInt" [UnitData] edge = Just $ do
+resolveEffect "readInt" [UnitData] edge = do
   tok <- byEdge -- send token back!
   trace "readInt" $ byNode $ wrapNodeZero Data { inp = tok
                                                , dat = NumberData 42
                                                }
   byNode $ wrapNodeZero Token { inp = edge, out = tok }
-resolveEffect "writeInt" [NumberData n] edge = Just $ do
+resolveEffect "writeInt" [NumberData n] edge = do
   tok <- byEdge -- send token back!
   trace ("writeInt: " <> show n) $ byNode $ wrapNodeZero Data { inp = tok
                                                               , dat = UnitData
                                                               }
   byNode $ wrapNodeZero Token { inp = edge, out = tok }
 resolveEffect "equal" [NumberData a, NumberData b] edge | a == b =
-  Just $ trace ("equal: " <> show a <> " " <> show b) $ churchTrue edge
+  trace ("equal: " <> show a <> " " <> show b) $ churchTrue edge
 resolveEffect "equal" [NumberData a, NumberData b] edge | a /= b =
-  Just $ trace ("not equal: " <> show a <> " " <> show b) $ churchFalse edge
-resolveEffect f args _ =
-  trace (T.unpack f <> " reflected " <> show args) Nothing -- bounce back
+  trace ("not equal: " <> show a <> " " <> show b) $ churchFalse edge
+resolveEffect _ _ _ = error "invalid action"
