@@ -63,18 +63,14 @@ transformDefs = go [] where
   go :: [(Identifier, Term)] -> Term -> Term
   go clo (Def n params body next) = do
     -- TODO: check for closedness, effects can not expand to open terms
-    -- let body'  = foldr Abs body params
-    -- let body'' = go clo body'
-    -- let recced = App (Abs n $ go ((n, body'') : clo) next) -- TODO: there may be a problem with body'' when it contains recursions?
-    --                  (Rec n (unwrapClosure clo recced) body'')
-    -- recced
-    -- TODO: recursion
-
     let body' = foldr Abs body params
-    App (Abs n $ go clo next) body'
+    let huh   = App (Abs n $ go clo next) body'
+    let recced = App (Abs n $ go ((n, body'') : clo) next) -- TODO: there may be a problem with body'' when it contains recursions?
+                     (Rec n (unwrapClosure clo recced) body'')
+    recced
   go _ t = t
 
--- TODO: somehow get rid of this awful code duplication
+-- TODO: somehow get rid of this awful code duplication - TODO: class!
 replaceWrapped
   :: EnvironmentWrapped
   -> ApplicationStrategy
@@ -103,21 +99,19 @@ replaceWrapped env strategy p term =
         (v, name) <- bindNameWrapped n
         void $ byNode $ wrapNodeZero Abstractor { inp = p, body = b, var = v }
         replaceWrapped (name : env) strategy b t
-      -- Rec n rec t -> do
-      --   (v, name) <- bindNameWrapped n
-      --   void $ byNode Effectful
-      --     { inp      = v
-      --     , name     = n
-      --     , function = \out arg -> do
-      --                    active <- byEdge
-      --                    replaceWrapped [] strategy active rec
-      --                    byNode $ wrapNodeZero Redirector { portA     = active
-      --                                                     , portB     = out
-      --                                                     , portC     = arg
-      --                                                     , direction = Top
-      --                                                     }
-      --     }
-      --   replaceWrapped (name : env) strategy p t
+      Rec n rec t -> do
+        (v, name) <- bindNameWrapped n
+        void $ byNode Effectful
+          { inp      = v
+          , cur      = v
+          , name     = n
+          , arity    = 0
+          , function = \_ out -> do
+                         tok <- byEdge -- bounce token
+                         replaceWrapped [] strategy tok (trace (show rec) rec)
+                         byNode $ wrapNodeZero Token { inp = tok, out = out }
+          }
+        replaceWrapped (name : env) strategy p t
       Eff a n -> void $ byNode $ wrapNodeZero $ Effectful
         { inp      = p
         , cur      = p
@@ -163,21 +157,19 @@ compile env strategy p term =
         (v, name) <- bindName n
         void $ newNode Abstractor { inp = p, body = b, var = v }
         compile (name : env) strategy b t
-      -- Rec n rec t -> do
-      --   (v, name) <- bindName n
-      --   void $ newNode Effectful
-      --     { inp      = v
-      --     , name     = n
-      --     , function = \out arg -> do
-      --                    active <- byEdge
-      --                    replaceWrapped [] strategy active rec
-      --                    byNode $ wrapNodeZero Redirector { portA     = active
-      --                                                     , portB     = out
-      --                                                     , portC     = arg
-      --                                                     , direction = Top
-      --                                                     }
-      --     }
-      --   compile (name : env) strategy p t
+      Rec n rec t -> do
+        (v, name) <- bindName n
+        void $ newNode Effectful
+          { inp      = v
+          , cur      = v
+          , name     = n
+          , arity    = 0
+          , function = \_ out -> do
+                         tok <- byEdge -- bounce token
+                         replaceWrapped [] strategy tok (trace (show rec) rec)
+                         byNode $ wrapNodeZero Token { inp = tok, out = out }
+          }
+        compile (name : env) strategy p t
       Eff a n -> void $ newNode $ Effectful { inp      = p
                                             , cur      = p
                                             , name     = n
@@ -201,7 +193,7 @@ bindNameWrapped
 bindNameWrapped sym = do
   v <- byEdge
   let sn = wrapNodeZero Multiplexer { out = v, ins = [] }
-  s <- byNode sn
+  -- byNode sn
   let ref = do
         e <- byEdge
         byNode $ wrapNodeZero $ (wrappee sn) { ins = e : ins (wrappee sn) }

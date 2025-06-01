@@ -131,13 +131,16 @@ actionArity :: Text -> Int
 actionArity "readInt"  = 1
 actionArity "writeInt" = 1
 actionArity "equal"    = 2
+actionArity "add"      = 2
 actionArity _          = -1
 
 -- | side effect (TODO: temporary!)
 eff :: Parser Term
 eff =
   (\x -> Eff (actionArity x) x)
-    <$> (symbol "readInt" <|> symbol "writeInt" <|> symbol "equal")
+    <$> (symbol "readInt" <|> symbol "writeInt" <|> symbol "equal" <|> symbol
+          "add"
+        )
 
 singleton :: Parser Term
 singleton =

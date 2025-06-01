@@ -65,4 +65,11 @@ resolveEffect "equal" [NumberData a, NumberData b] edge | a == b =
   trace ("equal: " <> show a <> " " <> show b) $ churchTrue edge
 resolveEffect "equal" [NumberData a, NumberData b] edge | a /= b =
   trace ("not equal: " <> show a <> " " <> show b) $ churchFalse edge
+resolveEffect "add" [NumberData a, NumberData b] edge = do
+  tok <- byEdge -- send token back!
+  trace ("add: " <> show a <> " " <> show b) $ byNode $ wrapNodeZero Data
+    { inp = tok
+    , dat = NumberData (a + b)
+    }
+  byNode $ wrapNodeZero Token { inp = edge, out = tok }
 resolveEffect _ _ _ = error "invalid action"
