@@ -154,23 +154,23 @@ applyConstant = do
     activePair
   replace $ byNode $ Constant { inp = i, name = n, args = as ++ [a] }
 
-applyEffectful :: (View [Port] n, View NodeLS n) => Rule n
-applyEffectful = do
-  Applicator { inp = i, arg = a } :-: Effectful { args = as, arity = ar, lmop = l, name = n } <-
+applyActor :: (View [Port] n, View NodeLS n) => Rule n
+applyActor = do
+  Applicator { inp = i, arg = a } :-: Actor { args = as, arity = ar, lmop = l, name = n } <-
     activePair
   require (ar > length as)
-  replace $ byNode $ Effectful { inp   = i
-                               , args  = as ++ [a]
-                               , arity = ar
-                               , lmop  = l
-                               , name  = n
-                               }
+  replace $ byNode $ Actor { inp   = i
+                           , args  = as ++ [a]
+                           , arity = ar
+                           , lmop  = l
+                           , name  = n
+                           }
 
 -- TODO: Require that the lmoPort is not on one of the unreduced ports yet
 -- Do we only reduce operator args, if the operator has all args already?
-reduceEffectful :: (View [Port] n, View NodeLS n) => Rule n
-reduceEffectful = do
-  e@(Effectful { args = as, lmop = lmo }) <- node
+reduceActor :: (View [Port] n, View NodeLS n) => Rule n
+reduceActor = do
+  e@(Actor { args = as, lmop = lmo }) <- node
   opid <- previous
   let ports   = inspect e :: [Port]
   let lmoport = ports !! lmo
@@ -198,9 +198,9 @@ runEffect "writeInt" [n] = Just $ unsafePerformIO $ do
   return result
 runEffect n _ = error n
 
-execEffectful :: forall n . (View [Port] n, View NodeLS n) => Rule n
-execEffectful = do
-  Effectful { inp = i, args = as, arity = ar, name = n } <- node
+execActor :: forall n . (View [Port] n, View NodeLS n) => Rule n
+execActor = do
+  Actor { inp = i, args = as, arity = ar, name = n } <- node
   opid <- previous
   require (length as == ar)
   -- check that all args are constants

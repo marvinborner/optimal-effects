@@ -53,19 +53,19 @@ layoutStep n = do
     return (cgf, cf, sf, rot)
   Unsafe.adjustNode n
     $ Position
-    . sf (\x -> min 10 (x * 0.9))
-    . cgf (\x -> min 10 (x * 0.01))
-    . cf (\x -> min 10 (100 / (x ^ 2 + 0.1)))
+    . sf (\x -> min 1000 (x * 0.9))
+    . cgf (\x -> min 10000 (x * 0.01))
+    . cf (\x -> min 10000 (100 / (x ^ 2 + 0.1)))
     . position
   Unsafe.adjustNode n $ rot (* 0.9)
 
 -- | Reduce graph to normal form
-nf :: Graph NodeLS -> Graph NodeLS
+nf :: Graph NodeTP -> Graph NodeTP
 nf term = term
 
 -- | Visualize reduction to normal form
 -- TODO: only app should use IO
-visualize :: Graph NodeLS -> IO ()
+visualize :: Graph NodeTP -> IO ()
 visualize term = do
   (_, _) <- UI.initialise
   let hypergraph  = execGraph (apply $ exhaustive compileShare) term
@@ -73,7 +73,7 @@ visualize term = do
   UI.run 50 id layoutStep layoutGraph ruleTree
 
 ruleTree
-  :: (EffectApplicable n, View NodeLS n, View [Port] n) => LabelledTree (Rule n)
+  :: (EffectApplicable n, View NodeTP n, View [Port] n) => LabelledTree (Rule n)
 ruleTree = Branch
   "All"
   [ Leaf "Duplicate"   duplicate
@@ -83,14 +83,14 @@ ruleTree = Branch
   , Leaf "Multiplexer" compileShare
   , Branch
     "Effective"
-    [ Leaf "Apply Effectful"                applyEffectful
+    [ Leaf "Apply Actor"                    applyActor
     , Leaf "Redirect Token"                 redirectToken
     , Leaf "Reflect Token"                  reflectToken
     -- , Leaf "Passthrough Right"              passthroughRight
     , Leaf "Initialize Partial Application" initializeDataPartial
     , Leaf "Apply Partially"                applyDataPartial
-    , Leaf "Backpropagate Effectful"        backpropagateEffectful
-    , Leaf "Backpropagate Effectful 2"      backpropagateEffectful2
+    , Leaf "Backpropagate Actor"            backpropagateActor
+    , Leaf "Backpropagate Actor 2"          backpropagateActor2
     , Leaf "Backpropagate Uneffectful"      backpropagateUneffectful
     -- , Leaf "Backpropagate Uneffectful2"     backpropagateUneffectful2
     ]

@@ -29,7 +29,7 @@ data NodeLS
         | Duplicator  {level :: Int, inp, out1, out2 :: Port}
         | Multiplexer {out :: Port, ins :: [Port]} -- only intermediate compilation result
         -- technically effectful+curry is a different node (curry connection is a temporary state)
-        | Effectful   {inp, cur :: Port, name :: T.Text, arity :: Int, function :: EffectFunction, args :: [String]}
+        | Actor   {inp, cur :: Port, name :: T.Text, arity :: Int, function :: EffectFunction, args :: [String]}
         | Data        {inp :: Port, dat :: String} -- TODO: custom eraser interaction?
         | BindN       {inp, arg, next, var :: Port, exec :: Bool}
         | UnitN       {inp, out :: Port, exec :: Bool}
@@ -49,7 +49,7 @@ instance View [Port] NodeLS where
     Eraser { inp = i }                            -> [i]
     Duplicator { inp = i, out1 = o1, out2 = o2 }  -> [i, o1, o2]
     Multiplexer { out = o, ins = is }             -> o : is
-    Effectful { inp = i, cur = c }                -> [i, c]
+    Actor { inp = i, cur = c }                    -> [i, c]
     Data { inp = i }                              -> [i]
     BindN { inp = i, arg = a, next = n, var = v } -> [i, a, n, v]
     UnitN { inp = i, out = o }                    -> [i, o]
@@ -63,7 +63,7 @@ instance View [Port] NodeLS where
     Duplicator{} -> node { inp = i, out1 = o1, out2 = o2 }
       where [i, o1, o2] = ports
     Multiplexer{} -> node { out = o, ins = is } where o : is = ports
-    Effectful{}   -> node { inp = i, cur = c } where [i, c] = ports
+    Actor{}       -> node { inp = i, cur = c } where [i, c] = ports
     Data{}        -> node { inp = i } where [i] = ports
     BindN{}       -> node { inp = i, arg = a, next = n, var = v }
       where [i, a, n, v] = ports
@@ -81,7 +81,7 @@ pp node = case node of
   Eraser { inp = i }                           -> i
   Duplicator { inp = i, out1 = o1, out2 = o2 } -> i
   Multiplexer { out = o, ins = is }            -> o
-  Effectful { inp = i }                        -> i
+  Actor { inp = i }                            -> i
   Data { inp = i }                             -> i
   BindN { inp = i, exec = False }              -> i
   BindN { arg = a, exec = True }               -> a

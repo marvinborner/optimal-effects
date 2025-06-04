@@ -135,9 +135,9 @@ actionArity "add"      = 2
 actionArity _          = -1
 
 -- | side effect (TODO: temporary!)
-eff :: Parser Term
-eff =
-  (\x -> Eff (actionArity x) x)
+action :: Parser Term
+action =
+  (\x -> Act x (actionArity x))
     <$> (symbol "readInt" <|> symbol "writeInt" <|> symbol "equal" <|> symbol
           "add"
         )
@@ -150,7 +150,7 @@ singleton =
     <|> doBlock
     <|> number
     <|> unitV
-    <|> try eff
+    <|> try action
     <|> var
     <|> parens block
 

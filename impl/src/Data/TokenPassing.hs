@@ -5,13 +5,14 @@
 
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 module Data.TokenPassing
-  ( NodeLS(..)
+  ( NodeTP(..)
   , AppDir(..)
-  , EffectData(..)
-  , EffectFunction
   , pp
   ) where
 
+import           Data.Effects                   ( EffectData
+                                                , EffectFunction
+                                                )
 import qualified Data.Text                     as T
 import           Data.View
 import           GraphRewriting.Graph.Types
@@ -21,15 +22,10 @@ import           GraphRewriting.Rule
 
 data AppDir = Top | BottomLeft | BottomRight
 
-data EffectData = StringData String | NumberData Int | UnitData
-  deriving Show
-
--- | Effects *effectively* get two arguments, the output port and the argument port
-type EffectFunction
-  = [EffectData] -> Edge -> Replace (Layout.Wrapper NodeLS) ()
+type EffectFunctionTP = EffectFunction (Layout.Wrapper NodeTP)
 
 -- | The signature of our graph
-data NodeLS
+data NodeTP
         = Initiator   {out :: Port}
         | Abstractor  {inp, body, var :: Port}
         | Eraser      {inp :: Port}
@@ -38,23 +34,23 @@ data NodeLS
         | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
         | Token       {inp, out :: Port}
         -- technically effectful+curry is a different node (curry connection is a temporary state)
-        | Effectful   {inp, cur :: Port, name :: T.Text, arity :: Int, function :: EffectFunction, args :: [EffectData]}
+        | Actor   {inp, cur :: Port, name :: T.Text, arity :: Int, function :: EffectFunctionTP, args :: [EffectData]}
         | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
 
-instance Eq NodeLS where
+instance Eq NodeTP where
   Eraser{}                  == Eraser{}                       = True
   Abstractor{}              == Redirector { direction = Top } = True -- both CON in SIC!
   Duplicator { level = l1 } == Duplicator { level = l2 }      = l1 == l2
   _                         == _                              = False
 
-instance View [Port] NodeLS where
+instance View [Port] NodeTP where
   inspect node = case node of
     Initiator { out = o }                          -> [o]
     Abstractor { inp = i, body = b, var = v }      -> [i, b, v]
     Eraser { inp = i }                             -> [i]
     Duplicator { inp = i, out1 = o1, out2 = o2 }   -> [i, o1, o2]
     Multiplexer { out = o, ins = is }              -> o : is
-    Effectful { inp = i, cur = c }                 -> [i, c]
+    Actor { inp = i, cur = c }                     -> [i, c]
     Redirector { portA = a, portB = b, portC = c } -> [a, b, c]
     Token { inp = i, out = o }                     -> [i, o]
     Data { inp = i }                               -> [i]
@@ -66,24 +62,24 @@ instance View [Port] NodeLS where
     Duplicator{} -> node { inp = i, out1 = o1, out2 = o2 }
       where [i, o1, o2] = ports
     Multiplexer{} -> node { out = o, ins = is } where o : is = ports
-    Effectful{}   -> node { inp = i, cur = c } where [i, c] = ports
+    Actor{}       -> node { inp = i, cur = c } where [i, c] = ports
     Redirector{}  -> node { portA = a, portB = b, portC = c }
       where [a, b, c] = ports
     Token{} -> node { inp = i, out = o } where [i, o] = ports
     Data{}  -> node { inp = i } where [i] = ports
 
-instance INet NodeLS where
+instance INet NodeTP where
   principalPort = pp
 
 -- The number is an index that specifies which port is the principal port out of the list of ports
-pp :: NodeLS -> Port
+pp :: NodeTP -> Port
 pp node = case node of
   Initiator { out = o }                        -> o
   Abstractor { inp = i, body = b, var = v }    -> i
   Eraser { inp = i }                           -> i
   Duplicator { inp = i, out1 = o1, out2 = o2 } -> i
   Multiplexer { out = o, ins = is }            -> o
-  Effectful { inp = i }                        -> i
+  Actor { inp = i }                            -> i
   Redirector { portA = a, direction = Top }    -> a
   Redirector { portB = b, direction = BottomRight } -> b
   Redirector { portC = c, direction = BottomLeft } -> c

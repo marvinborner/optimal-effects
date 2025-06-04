@@ -6,6 +6,9 @@ module Language.TokenPassing.Effects
   ) where
 
 import           Control.Monad
+import           Data.Effects                   ( EffectData(..)
+                                                , EffectFunction
+                                                )
 import qualified Data.Text                     as T
 import           Data.TokenPassing
 import           GraphRewriting.Graph.Read
@@ -17,14 +20,14 @@ import           GraphRewriting.Rule
 
 import           Debug.Trace
 
-wrapNodeZero :: NodeLS -> Layout.Wrapper NodeLS
+wrapNodeZero :: NodeTP -> Layout.Wrapper NodeTP
 wrapNodeZero n = Layout.Wrapper
   { wRot    = Rotation 0
   , wPos    = Position { position = Vector2 { v2x = 0, v2y = 0 } }
   , wrappee = n
   }
 
-churchTrue :: Edge -> Replace (Layout.Wrapper NodeLS) ()
+churchTrue :: Edge -> Replace (Layout.Wrapper NodeTP) ()
 churchTrue edge = do
   tok <- byEdge -- send token back!
   var <- byEdge
@@ -35,7 +38,7 @@ churchTrue edge = do
   byNode $ wrapNodeZero Abstractor { inp = con, body = var, var = era }
   byNode $ wrapNodeZero Token { inp = edge, out = tok }
 
-churchFalse :: Edge -> Replace (Layout.Wrapper NodeLS) ()
+churchFalse :: Edge -> Replace (Layout.Wrapper NodeTP) ()
 churchFalse edge = do
   tok <- byEdge -- send token back!
   var <- byEdge
@@ -48,7 +51,7 @@ churchFalse edge = do
 
 -- TODO: allow IO via monad
 -- TODO: passing without argument will execute unapplied, we should then just return the action node (??)
-resolveEffect :: T.Text -> EffectFunction
+-- resolveEffect :: T.Text -> EffectFunction n
 resolveEffect "readInt" [UnitData] edge = do
   tok <- byEdge -- send token back!
   trace "readInt" $ byNode $ wrapNodeZero Data { inp = tok

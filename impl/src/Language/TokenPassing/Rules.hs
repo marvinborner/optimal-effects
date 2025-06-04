@@ -22,7 +22,7 @@ import           GraphRewriting.Pattern
 import           GraphRewriting.Pattern.InteractionNet
 import           GraphRewriting.Rule
 
-compileShare :: (View [Port] n, View NodeLS n) => Rule n
+compileShare :: (View [Port] n, View NodeTP n) => Rule n
 compileShare = do
   Multiplexer { out = o, ins = is } <- node
   case is of
@@ -49,7 +49,7 @@ split i n xs = let (x, xs') = splitAt i xs in x : split i n xs'
 transpose' n [] = replicate n []
 transpose' n xs = transpose xs
 
-commute :: (View [Port] n, View NodeLS n) => Rule n
+commute :: (View [Port] n, View NodeTP n) => Rule n
 commute = do
   n1 :-: n2 <- activePair
   require (n1 /= n2) -- TODO: replace by linear
@@ -84,7 +84,7 @@ commute = do
       Abstractor{} -> me { level = level me + 1 }
       _            -> me
 
-annihilate :: (View [Port] n, View NodeLS n) => Rule n
+annihilate :: (View [Port] n, View NodeTP n) => Rule n
 annihilate = do
   n1 :-: n2 <- activePair
   require (n1 == n2)
@@ -92,22 +92,22 @@ annihilate = do
   let aux2 = pp n2 `delete` inspect n2
   rewire $ [ [a1, a2] | (a1, a2) <- aux1 `zip` aux2 ]
 
-eliminateDuplicator :: (View [Port] n, View NodeLS n) => Rule n
+eliminateDuplicator :: (View [Port] n, View NodeTP n) => Rule n
 eliminateDuplicator = do
   Eraser { inp = iE }                           <- node
   Duplicator { inp = iD, out1 = o1, out2 = o2 } <- neighbour =<< previous
   require (iE == o1 || iE == o2)
   if iE == o1 then rewire [[iD, o2]] else rewire [[iD, o1]]
 
-reflectsToken Abstractor{}            = True
-reflectsToken Effectful { arity = a } = a > 0
-reflectsToken Data{}                  = True
-reflectsToken _                       = False
+reflectsToken Abstractor{}        = True
+reflectsToken Actor { arity = a } = a > 0
+reflectsToken Data{}              = True
+reflectsToken _                   = False
 
 isToken Token{} = True
 isToken _       = False
 
-reflectToken :: (View [Port] n, View NodeLS n) => Rule n
+reflectToken :: (View [Port] n, View NodeTP n) => Rule n
 reflectToken = do
   reflector :-: tok@(Token { inp = iT, out = oT }) <- activePair
   guard $ reflectsToken reflector
@@ -115,7 +115,7 @@ reflectToken = do
     byNode $ reflector { inp = iT }
     byNode $ tok { inp = oT, out = iT }
 
-redirectToken :: (View [Port] n, View NodeLS n) => Rule n
+redirectToken :: (View [Port] n, View NodeTP n) => Rule n
 redirectToken = do
   red@(Redirector { portA = a, portB = b, portC = c, direction = r }) :-: tok@(Token { inp = iT, out = oT }) <-
     activePair
@@ -134,14 +134,14 @@ redirectToken = do
       byNode $ red { portA = oT, portB = v, direction = Top }
 
 -- TODO: should this basically almost be !reflectsToken ??
-hasActionPotential :: NodeLS -> Bool
+hasActionPotential :: NodeTP -> Bool
 hasActionPotential (Redirector { direction = BottomRight }) = True
-hasActionPotential (Effectful{}) = True
-hasActionPotential (Data{}     ) = False -- Must be False or possible loops with T-App
-hasActionPotential _             = False
+hasActionPotential (Actor{}) = True
+hasActionPotential (Data{} ) = False -- Must be False or possible loops with T-App
+hasActionPotential _         = False
 
-backpropagateEffectful :: (View [Port] n, View NodeLS n) => Rule n
-backpropagateEffectful = do -- ==> there is an action somewhere inside b
+backpropagateActor :: (View [Port] n, View NodeTP n) => Rule n
+backpropagateActor = do -- ==> there is an action somewhere inside b
   a@(Redirector { direction = BottomLeft }) :-: b <- activePair
   guard $ hasActionPotential b
   replace $ do
@@ -149,15 +149,15 @@ backpropagateEffectful = do -- ==> there is an action somewhere inside b
     byNode b
 
 -- TODO: is this fully correct?
-backpropagateEffectful2 :: (View [Port] n, View NodeLS n) => Rule n
-backpropagateEffectful2 = do -- ==> there is an action somewhere inside b
+backpropagateActor2 :: (View [Port] n, View NodeTP n) => Rule n
+backpropagateActor2 = do -- ==> there is an action somewhere inside b
   a@(Redirector { direction = Top }) :-: b <- activePair
   guard $ hasActionPotential b
   replace $ do
     byNode $ a { direction = BottomRight }
     byNode b
 
-backpropagateUneffectful :: (View [Port] n, View NodeLS n) => Rule n
+backpropagateUneffectful :: (View [Port] n, View NodeTP n) => Rule n
 backpropagateUneffectful = do -- ==> there is no immediate action potential in b
   a@(Redirector { direction = BottomLeft }) :-: b <- activePair
   guard $ not $ hasActionPotential b
@@ -168,7 +168,7 @@ backpropagateUneffectful = do -- ==> there is no immediate action potential in b
 -- is this fully correct?
 -- THIS is certisfiably wrong, can cause infinite loops
 -- TODO: is something like this still required somehow?
--- backpropagateUneffectful2 :: (View [Port] n, View NodeLS n) => Rule n
+-- backpropagateUneffectful2 :: (View [Port] n, View NodeTP n) => Rule n
 -- backpropagateUneffectful2 = do -- ==> there is no immediate action potential in b
 --   a@(Redirector { direction = Top }) :-: b <- activePair
 --   guard $ not $ hasActionPotential b
@@ -177,7 +177,7 @@ backpropagateUneffectful = do -- ==> there is no immediate action potential in b
 --     byNode b
 
 -- TODO: WHAT IS THIS RULE?? does it have any use?
--- passthroughRight :: (View [Port] n, View NodeLS n) => Rule n
+-- passthroughRight :: (View [Port] n, View NodeTP n) => Rule n
 -- passthroughRight = do
 --   red@(Redirector { direction = BottomRight }) :-: n <- activePair
 --   guard $ not $ isToken n
@@ -185,46 +185,46 @@ backpropagateUneffectful = do -- ==> there is no immediate action potential in b
 --     byNode $ red { direction = Top } -- everything else stays!
 --     byNode n
 
-eraser :: (View [Port] n, View NodeLS n) => Rule n
+eraser :: (View [Port] n, View NodeTP n) => Rule n
 eraser = do
   rewrite  <- commute
   Eraser{} <- liftReader . inspectNode =<< previous
   return rewrite
 
-duplicate :: (View [Port] n, View NodeLS n) => Rule n
+duplicate :: (View [Port] n, View NodeTP n) => Rule n
 duplicate = do
   rewrite      <- commute
   Duplicator{} <- liftReader . inspectNode =<< previous
   return rewrite
 
-initializeDataPartial :: (View [Port] n, View NodeLS n) => Rule n
+initializeDataPartial :: (View [Port] n, View NodeTP n) => Rule n
 initializeDataPartial = do
-  eff@(Effectful { arity = n }) :-: Redirector { portA = f, portB = p, portC = a, direction = Top } <-
+  eff@(Actor { arity = n }) :-: Redirector { portA = f, portB = p, portC = a, direction = Top } <-
     activePair
   guard $ n > 0
   replace $ byNode $ eff { inp = a, cur = p }
 
-applyDataPartial :: (View [Port] n, View NodeLS n) => Rule n
+applyDataPartial :: (View [Port] n, View NodeTP n) => Rule n
 applyDataPartial = do
-  eff@(Effectful { args = as, cur = c, arity = n }) :-: Data { inp = p, dat = d } <-
+  eff@(Actor { args = as, cur = c, arity = n }) :-: Data { inp = p, dat = d } <-
     activePair
   guard $ n > 0
   replace $ byNode $ eff { inp = c, args = d : as, arity = n - 1 }
 
-applyEffectfulNode :: Rule (Layout.Wrapper NodeLS)
-applyEffectfulNode = do
-  tok@(Token { out = p, inp = i }) :-: eff@(Effectful { function = f, args = a, arity = 0 }) <-
+applyActorNode :: Rule (Layout.Wrapper NodeTP)
+applyActorNode = do
+  tok@(Token { out = p, inp = i }) :-: eff@(Actor { function = f, args = a, arity = 0 }) <-
     activePair
   replace $ f a p
 
 class EffectApplicable n where
   applyEffect :: Rule n
 
-instance EffectApplicable (Layout.Wrapper NodeLS) where
-  applyEffect = applyEffectfulNode
+instance EffectApplicable (Layout.Wrapper NodeTP) where
+  applyEffect = applyActorNode
 
-applyEffectful :: (EffectApplicable n, View [Port] n, View NodeLS n) => Rule n
-applyEffectful = do
+applyActor :: (EffectApplicable n, View [Port] n, View NodeTP n) => Rule n
+applyActor = do
   eff <- applyEffect
   -- optional $ exhaustive compileShare -- TODO!
   return eff

@@ -8,6 +8,7 @@ module Main
 
 import qualified Data.Front                    as Front
                                                 ( Term(..) )
+import qualified Data.Lambda                   as Lambda
 import qualified Data.Text                     as T
 import qualified Data.TokenPassing             as TokenPassing
 import           Debug.Trace
@@ -19,8 +20,9 @@ import qualified Language.Front.Transformer.Lambda
 import qualified Language.Front.Transformer.TokenPassing
                                                as Front
                                                 ( transformTokenPassing )
-import qualified Language.Lambda.Reducer       as Lambda
-                                                ( nf )
+import qualified Language.Lambda.Transformer.TokenPassing
+                                               as Lambda
+                                                ( transformTokenPassing )
 import qualified Language.TokenPassing.Reducer as TokenPassing
                                                 ( nf
                                                 , visualize
@@ -45,11 +47,11 @@ args = pure $ Args ArgEval
 
 -- pipeline :: T.Text -> Either String TokenPassing.Term
 pipeline input = do
-  front <- Front.parseProgram input
-  -- lambda <- Front.transformLambda front
-  -- let lnf = traceShow $ Lambda.nf
-  --       (trace (show front <> "\n\n\n" <> show lambda <> "\n\n\n") lambda)
-  trace (show front) Front.transformTokenPassing front
+  front  <- Front.parseProgram input
+  lambda <- Front.transformLambda front
+  trace (show front <> "\n\n\n" <> show (Lambda.unwrap lambda))
+        (Lambda.transformTokenPassing lambda)
+  -- trace (show front) Front.transformTokenPassing front
 
 actions :: Args -> IO ()
 actions Args { _argMode = ArgEval } = do

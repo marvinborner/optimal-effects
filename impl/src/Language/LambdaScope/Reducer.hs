@@ -86,10 +86,10 @@ ruleTree = Branch
     , Leaf "Erase"             eraser
     , Branch
       "Effective"
-      [ Leaf "Constant"         applyConstant
-      , Leaf "Apply Effectful"  applyEffectful
-      , Leaf "Exec Effectful"   execEffectful
-      , Leaf "Reduce Effectful" reduceEffectful
+      [ Leaf "Constant"     applyConstant
+      , Leaf "Apply Actor"  applyActor
+      , Leaf "Exec Actor"   execActor
+      , Leaf "Reduce Actor" reduceActor
       ]
     ]
   ]

@@ -28,7 +28,7 @@ data Term = Def Identifier [Identifier] Term Term
           | Num Int
           | UnitV
           | Fork Term Term
-          | Eff Int Identifier
+          | Act Identifier Int
           | Do Action
           | Pure Term
           | Strict Term
@@ -50,7 +50,7 @@ instance Show Term where
   show (Abs n b  ) = "λ" <> T.unpack n <> "." <> show b
   show (Num n    ) = show n
   show (UnitV    ) = "<>"
-  show (Eff _ n  ) = T.unpack n
+  show (Act n _  ) = T.unpack n
   show (Do     as) = "do (" <> show as <> ")"
   show (Pure   t ) = "pure (" <> show t <> ")"
   show (Strict t ) = "strict (" <> show t <> ")"

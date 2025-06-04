@@ -57,12 +57,12 @@ compile env p term = case term of
     let t    = foldr Abs body params
     void $ compile env' e t
     compile env' p next
-  Eff a n -> void $ newNode $ Effectful { inp   = p
-                                        , args  = []
-                                        , arity = a
-                                        , lmop  = 0
-                                        , name  = T.unpack n
-                                        }
+  Act n a -> void $ newNode $ Actor { inp   = p
+                                    , args  = []
+                                    , arity = a
+                                    , lmop  = 0
+                                    , name  = T.unpack n
+                                    }
   Var name -> case env of
     [] ->
       void $ newNode (Constant { inp = p, name = T.unpack name, args = [] })

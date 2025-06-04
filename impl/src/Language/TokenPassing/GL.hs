@@ -7,6 +7,7 @@
 module Language.TokenPassing.GL
   () where
 
+import           Data.Effects                   ( EffectData(..) )
 import qualified Data.Text                     as T
 import           Data.TokenPassing
 import           GraphRewriting.GL.Render
@@ -14,7 +15,7 @@ import           GraphRewriting.Layout.PortSpec
 import           GraphRewriting.Strategies.Control
 import qualified Graphics.UI.GLUT              as GL
 
-instance PortSpec NodeLS where
+instance PortSpec NodeTP where
   portSpec node =
     let sd = sameDir
     in
@@ -28,7 +29,7 @@ instance PortSpec NodeLS where
           , (Vector2 0.6 (-0.5)   , s)
           ]
         Redirector{}  -> [sd n, sd s, sd e]
-        Effectful{}   -> [sd n, sd s]
+        Actor{}       -> [sd n, sd s]
         Token{}       -> [sd n, sd s]
         Data{}        -> [sd n]
         Multiplexer{} -> [sd n, sd s]
@@ -44,7 +45,7 @@ instance PortSpec NodeLS where
       Vector2 (x1 * x + x2 * y) (y1 * x + y2 * y)
     sws = Vector2 (-0.7) (-0.7)
 
-instance Render NodeLS where
+instance Render NodeTP where
   render = renderNode
 
 instance Render n => Render (Wrapper n) where
@@ -67,14 +68,14 @@ renderNode node = drawPorts node >> case node of
   Redirector { direction = Top }        -> drawNode "@T"
   Redirector { direction = BottomRight } -> drawNode "@R"
   Redirector { direction = BottomLeft } -> drawNode "@L"
-  Effectful { name = n, arity = a }     -> drawNode $ T.unpack n <> show a
+  Actor { name = n, arity = a }         -> drawNode $ T.unpack n <> show a
   Token{}                               -> drawNode "T"
   Data { dat = UnitData }               -> drawNode "()"
   Data { dat = StringData s }           -> drawNode $ "D=" <> s
   Data { dat = NumberData n }           -> drawNode $ "D=" <> show n
   Multiplexer{}                         -> drawNode "M"
 
-drawPorts :: NodeLS -> IO ()
+drawPorts :: NodeTP -> IO ()
 drawPorts n = sequence_
   [ drawPort (factor p) pos | (pos, p) <- positions `zip` ports ] where
   positions = relPortPos n

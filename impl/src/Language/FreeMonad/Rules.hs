@@ -129,13 +129,12 @@ bindExecUnit = do
 
 initializeDataPartial :: (View [Port] n, View NodeLS n) => Rule n
 initializeDataPartial = do
-  eff@(Effectful{}) :-: Applicator { inp = p, func = f, arg = a } <- activePair
+  eff@(Actor{}) :-: Applicator { inp = p, func = f, arg = a } <- activePair
   replace $ byNode $ eff { inp = a, cur = p }
 
 applyDataPartial :: (View [Port] n, View NodeLS n) => Rule n
 applyDataPartial = do
-  eff@(Effectful { args = as, cur = c }) :-: Data { inp = p, dat = d } <-
-    activePair
+  eff@(Actor { args = as, cur = c }) :-: Data { inp = p, dat = d } <- activePair
   replace $ byNode $ eff { inp = c, args = d : as }
 
 initializeUnitExec :: (View [Port] n, View NodeLS n) => Rule n
@@ -154,13 +153,13 @@ initializeBindExec = do
 
 applyUnitExec' :: Rule (Layout.Wrapper NodeLS)
 applyUnitExec' = do
-  UnitN { inp = p, exec = True } :-: Effectful { function = f, args = a } <-
+  UnitN { inp = p, exec = True } :-: Actor { function = f, args = a } <-
     activePair
   replace $ f a p
 
 applyBindExec' :: Rule (Layout.Wrapper NodeLS)
 applyBindExec' = do
-  BindN { inp = i, next = n, var = p, exec = True } :-: Effectful { function = f, args = a } <-
+  BindN { inp = i, next = n, var = p, exec = True } :-: Actor { function = f, args = a } <-
     activePair
   replace $ do
     byWire i n

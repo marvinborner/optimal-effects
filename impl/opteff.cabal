@@ -29,6 +29,7 @@ library
       Data.Front
       Data.Lambda
       Data.View
+      Data.Effects
       GraphRewriting.GL.Canvas
       GraphRewriting.GL.Global
       GraphRewriting.GL.HyperEdge
@@ -69,8 +70,7 @@ library
       Language.Front.Transformer.LambdaScope
       Language.Front.Transformer.TokenPassing
       Language.Front.Transformer.FreeMonad
-      Language.Lambda.Parser
-      Language.Lambda.Reducer
+      Language.Lambda.Transformer.TokenPassing
   other-modules:
       Paths_opteff
       GraphRewriting.Graph.Internal
@@ -95,6 +95,8 @@ library
     , text
     , unordered-containers
     , process
+    , data-fix
+    , deriving-compat
   default-language: Haskell2010
 
 executable opteff-exe

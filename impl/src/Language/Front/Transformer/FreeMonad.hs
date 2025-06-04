@@ -88,7 +88,7 @@ replaceWrapped env p term =
         replaceWrapped (name : env) b t
       -- Rec n rec t -> do
       --   (v, name) <- bindNameWrapped n
-      --   void $ byNode Effectful
+      --   void $ byNode Actor
       --     { inp      = v
       --     , name     = n
       --     , function = \out arg -> do
@@ -100,7 +100,7 @@ replaceWrapped env p term =
       --                                        }
       --     }
       --   replaceWrapped (name : env) p t
-      Eff a n -> void $ byNode $ wrapNodeZero $ Effectful
+      Act n a -> void $ byNode $ wrapNodeZero $ Actor
         { inp      = p
         , cur      = p
         , name     = n
@@ -113,7 +113,7 @@ replaceWrapped env p term =
         -- Just n  -> do
         --   r <- referenceWrapped n
         --   replace $ void $ mergeEdges p r
-        -- Nothing -> void $ newNode $ Effectful { inp = p, name = name, function = ??? }
+        -- Nothing -> void $ newNode $ Actor { inp = p, name = name, function = ??? }
         Nothing -> error $ "invalid var " <> T.unpack name
       Num n -> void $ byNode $ wrapNodeZero $ Data { inp = p, dat = show n }
       If clause true false ->
@@ -140,7 +140,7 @@ compile env p term =
         compile (name : env) b t
       -- Rec n rec t -> do
       --   (v, name) <- bindName n
-      --   void $ newNode Effectful
+      --   void $ newNode Actor
       --     { inp      = v
       --     , name     = n
       --     , function = \out arg -> do
@@ -152,16 +152,16 @@ compile env p term =
       --                                        }
       --     }
       --   compile (name : env) p t
-      Eff a n -> void $ newNode $ Effectful { inp      = p
-                                            , cur      = p -- TODO: should be empty
-                                            , name     = n
-                                            , arity    = a
-                                            , function = resolveEffect n
-                                            , args     = []
-                                            }
+      Act n a -> void $ newNode $ Actor { inp      = p
+                                        , cur      = p -- TODO: should be empty
+                                        , name     = n
+                                        , arity    = a
+                                        , function = resolveEffect n
+                                        , args     = []
+                                        }
       Var name -> case find (\n -> name == symbol n) env of
         Just n  -> mergeEdges p =<< reference n
-        -- Nothing -> void $ newNode $ Effectful { inp = p, name = name, function = ??? }
+        -- Nothing -> void $ newNode $ Actor { inp = p, name = name, function = ??? }
         Nothing -> error $ "invalid var " <> T.unpack name
       Num n                -> void $ newNode $ Data { inp = p, dat = show n }
       If clause true false -> compile env p $ App (App clause true) false

@@ -1,0 +1,11 @@
+-- cons x xs c e = c x xs
+-- nil c e = e
+-- 
+-- succ z = cons z (succ (add z 1))
+-- succ 0
+
+-- succ z = z (succ (add z 1))
+-- succ 0
+
+succ a b = succ (add a a) (add a a)
+succ 0 0

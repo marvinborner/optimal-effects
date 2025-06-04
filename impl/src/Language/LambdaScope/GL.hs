@@ -32,7 +32,7 @@ instance PortSpec NodeLS where
           , (Vector2 0.6 (-0.5)   , s)
           ]
         Delimiter{} -> [sd $ Vector2 0 0.7, sd $ Vector2 0 (-0.7)]
-        Effectful{} ->
+        Actor{} ->
           sd n
             : [ sd $ rm (alpha args * x) `mmul` sws | x <- [0 .. la args - 1] ]
    where
@@ -76,7 +76,7 @@ renderNode node = drawPorts node >> case node of
       vertex2 (0.8, 0)
       vertex2 (0.8, -0.3)
     renderString $ show $ level node
-  Effectful{} -> drawNode (name node)
+  Actor{} -> drawNode (name node)
 
 drawPorts :: NodeLS -> IO ()
 drawPorts n = sequence_

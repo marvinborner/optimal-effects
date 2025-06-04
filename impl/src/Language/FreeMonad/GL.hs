@@ -28,7 +28,7 @@ instance PortSpec NodeLS where
           , (Vector2 (-0.6) (-0.5), s)
           , (Vector2 0.6 (-0.5)   , s)
           ]
-        Effectful{}   -> [sd n, sd s]
+        Actor{}       -> [sd n, sd s]
         Data{}        -> [sd n]
         Multiplexer{} -> [sd n, sd s]
         BindN{}       -> [sd n, sd s, sd e, sd e] -- TODO
@@ -66,7 +66,7 @@ renderNode node = drawPorts node >> case node of
       vertex2 (-1, -0.5)
       vertex2 (1, -0.5)
     renderString $ show $ level node
-  Effectful{}      -> drawNode $ T.unpack $ name node
+  Actor{}          -> drawNode $ T.unpack $ name node
   Data { dat = d } -> drawNode $ "D=" <> d
   Multiplexer{}    -> drawNode "M"
   BindN{}          -> drawNode ">>="
