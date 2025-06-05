@@ -5,11 +5,13 @@
 module Data.Lambda
   ( lam
   , app
+  , rec
   , idx
   , act
   , dat
   , Term
   , TermF(..)
+  , para
   , unwrap
   ) where
 
@@ -21,6 +23,7 @@ import           Text.Show.Deriving
 data TermF t = Lam t
             | App t t
             | Idx Int
+            | Rec t t
             | Tok
             | Cot
             | Act T.Text Int
@@ -34,12 +37,16 @@ instance Show t => Show (TermF t) where
   showsPrec _ (Idx i)   = shows i
   showsPrec _ Tok       = showString "<"
   showsPrec _ Cot       = showString ">"
+  showsPrec _ (Rec _ _) = showString "REC"
   showsPrec _ (Act n _) = shows n
   showsPrec _ (Dat d  ) = shows d
 
 deriveShow1 ''TermF
 
 type Term = Fix TermF
+
+para :: Functor f => (f (Fix f, a) -> a) -> Fix f -> a
+para f (Fix fx) = f (fmap (\x -> (x, para f x)) fx)
 
 lam :: Term -> Term
 lam body = Fix $ Lam body
@@ -49,6 +56,11 @@ app func arg = Fix $ App func arg
 
 idx :: Int -> Term
 idx n = Fix $ Idx n
+
+-- | an application to an implicit abstraction but to a boxed term with its closure
+-- | Rec a b === Abb (Abs a) <b>
+rec :: Term -> Term -> Term
+rec t c = Fix $ Rec t c
 
 act :: T.Text -> Int -> Term
 act name arity = Fix $ Act name arity

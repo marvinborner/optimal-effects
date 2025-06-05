@@ -199,21 +199,21 @@ duplicate = do
 
 initializeDataPartial :: (View [Port] n, View NodeTP n) => Rule n
 initializeDataPartial = do
-  eff@(Actor { arity = n }) :-: Redirector { portA = f, portB = p, portC = a, direction = Top } <-
+  act@(Actor { arity = n }) :-: Redirector { portA = f, portB = p, portC = a, direction = Top } <-
     activePair
   guard $ n > 0
-  replace $ byNode $ eff { inp = a, cur = p }
+  replace $ byNode $ act { inp = a, cur = p }
 
 applyDataPartial :: (View [Port] n, View NodeTP n) => Rule n
 applyDataPartial = do
-  eff@(Actor { args = as, cur = c, arity = n }) :-: Data { inp = p, dat = d } <-
+  act@(Actor { args = as, cur = c, arity = n }) :-: Data { inp = p, dat = d } <-
     activePair
   guard $ n > 0
-  replace $ byNode $ eff { inp = c, args = d : as, arity = n - 1 }
+  replace $ byNode $ act { inp = c, args = d : as, arity = n - 1 }
 
 applyActorNode :: Rule (Layout.Wrapper NodeTP)
 applyActorNode = do
-  tok@(Token { out = p, inp = i }) :-: eff@(Actor { function = f, args = a, arity = 0 }) <-
+  (Token { out = p, inp = i }) :-: (Actor { function = f, args = a, arity = 0 }) <-
     activePair
   replace $ f a p
 
@@ -225,6 +225,6 @@ instance EffectApplicable (Layout.Wrapper NodeTP) where
 
 applyActor :: (EffectApplicable n, View [Port] n, View NodeTP n) => Rule n
 applyActor = do
-  eff <- applyEffect
+  act <- applyEffect
   -- optional $ exhaustive compileShare -- TODO!
-  return eff
+  return act

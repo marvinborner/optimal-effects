@@ -115,7 +115,7 @@ replaceWrapped env strategy p term =
           , arity    = 0
           , function = \_ out -> do
                          tok <- byEdge -- bounce token
-                         replaceWrapped [] strategy tok (trace (show rec) rec)
+                         replaceWrapped [] strategy tok rec
                          byNode $ wrapNodeZero Token { inp = tok, out = out }
           }
         replaceWrapped (name : env) strategy p t
@@ -173,7 +173,7 @@ compile env strategy p term =
           , arity    = 0
           , function = \_ out -> do
                          tok <- byEdge -- bounce token
-                         replaceWrapped [] strategy tok (trace (show rec) rec)
+                         replaceWrapped [] strategy tok rec
                          byNode $ wrapNodeZero Token { inp = tok, out = out }
           }
         compile (name : env) strategy p t

@@ -9,13 +9,19 @@ import           Control.Monad.Except
 import           Control.Monad.State
 import           Data.Effects
 import           Data.Front
-import qualified Data.Lambda                   as Lambda
+import qualified Data.Lambda                   as L
 import           Data.List                      ( elemIndex )
 import qualified Data.Text                     as T
 
+import           Debug.Trace
+
+data Context = Context
+  { stk :: [Identifier]
+  , clo :: [L.Term]
+  }
+
 -- | Transformation monad
--- | passes a stack of identifiers for de Bruijn translation
-type TransM = ExceptT String (State [Identifier])
+type TransM = ExceptT String (State Context)
 
 -- | True if n is used recursively in body
 isRecursive :: Identifier -> Term -> Bool
@@ -40,51 +46,55 @@ isRecursive n = \case
   e -> error $ show e
 
 -- | Wraps term in n abstractions
-wrap :: Int -> Lambda.Term -> Lambda.Term
+wrap :: Int -> L.Term -> L.Term
 wrap 0 t = t
-wrap n t = Lambda.lam $ wrap (n - 1) t
+wrap n t = L.lam $ wrap (n - 1) t
 
-transform :: Term -> TransM Lambda.Term
+unwrapClosure :: [L.Term] -> L.Term -> L.Term
+unwrapClosure []      term = term
+unwrapClosure (t : c) term = L.app (L.lam (unwrapClosure c term)) t
+
+transform :: Term -> TransM L.Term
 transform = \case
   Def n params body next
     | isRecursive n body -> do
-      error ""
-    |
-      -- s <- get
-      -- put (reverse (n : params) ++ s)
-      -- b <- transform body
-      -- put (n : s)
-      -- d <- transform next
-      -- let wrapped = wrap (length params) b
-      -- return $ Lambda.app (Lambda.lam d)
-      --                     (Lambda.app yCombinator (Lambda.lam wrapped))
-      otherwise -> do
-      s <- get
-      put (reverse params ++ s)
+      ctx@(Context { stk = s, clo = c }) <- get
+      put $ ctx { stk = reverse (n : params) ++ s }
       b <- transform body
-      put (n : s)
+      let wrapped = wrap (length params) b -- +1 by L.rec
+      let rec     = L.rec wrapped (unwrapClosure c rec)
+      put $ ctx { stk = n : s, clo = rec : c }
       d <- transform next
+      return $ L.app (L.lam d) rec
+    | otherwise -> do
+      ctx@(Context { stk = s, clo = c }) <- get
+      put $ ctx { stk = reverse params ++ s }
+      b <- transform body
       let wrapped = wrap (length params) b
-      return $ Lambda.app (Lambda.lam d) wrapped
+      put $ ctx { stk = n : s, clo = wrapped : c }
+      d <- transform next
+      return $ L.app (L.lam d) wrapped
   If clause true false -> do
     clause' <- transform clause
     true'   <- transform true
     false'  <- transform false
-    return $ Lambda.app (Lambda.app clause' true') false'
+    return $ L.app (L.app clause' true') false'
   Var n -> do
-    s <- get
+    (Context { stk = s }) <- get
     let maybeIdx = elemIndex n s
     case maybeIdx of
       Nothing  -> throwError $ "Identifier not found: " <> T.unpack n
-      Just idx -> return $ Lambda.idx idx
+      Just idx -> return $ L.idx idx
   App a b -> do
     a' <- transform a
     b' <- transform b
-    return $ Lambda.app a' b'
-  Num n   -> return $ Lambda.dat (NumberData n)
-  UnitV   -> return $ Lambda.dat UnitData
-  Act a n -> return $ Lambda.act a n
+    return $ L.app a' b'
+  Num n   -> return $ L.dat $ NumberData n
+  UnitV   -> return $ L.dat UnitData
+  Act a n -> return $ L.act a n
   t       -> error $ show t
 
-transformLambda :: Term -> Either String Lambda.Term
-transformLambda t = evalState (runExceptT $ transform t) []
+transformLambda :: Term -> Either String L.Term
+transformLambda t =
+  let t' = transform t
+  in  evalState (runExceptT t') (Context { stk = [], clo = [] })

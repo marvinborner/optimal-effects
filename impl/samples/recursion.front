@@ -7,5 +7,12 @@
 -- succ z = z (succ (add z 1))
 -- succ 0
 
-succ a b = succ (add a a) (add a a)
-succ 0 0
+-- succ a b = succ (add a a) (add a a)
+-- succ 0 0
+
+io = (
+  x = readInt <>
+  writeInt x
+  x io
+)
+io

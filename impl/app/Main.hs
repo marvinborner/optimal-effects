@@ -49,8 +49,9 @@ args = pure $ Args ArgEval
 pipeline input = do
   front  <- Front.parseProgram input
   lambda <- Front.transformLambda front
-  trace (show front <> "\n\n\n" <> show (Lambda.unwrap lambda))
-        (Lambda.transformTokenPassing lambda)
+  -- trace (show front <> "\n\n\n" <> show (Lambda.unwrap lambda))
+  --       (Lambda.transformTokenPassing lambda)
+  Lambda.transformTokenPassing lambda
   -- trace (show front) Front.transformTokenPassing front
 
 actions :: Args -> IO ()
