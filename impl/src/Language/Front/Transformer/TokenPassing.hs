@@ -20,7 +20,7 @@ import           GraphRewriting.Graph.Write
 import           GraphRewriting.Layout.Wrapper as Layout
 import           GraphRewriting.Pattern         ( edge )
 import           GraphRewriting.Rule
-import           Language.TokenPassing.Effects
+import           Language.Generic.Effects
 
 import           Debug.Trace
 
@@ -110,7 +110,6 @@ replaceWrapped env strategy p term =
         (v, name) <- bindNameWrapped n
         void $ byNode Actor
           { inp      = v
-          , cur      = v
           , name     = n
           , arity    = 0
           , function = \_ out -> do
@@ -121,7 +120,6 @@ replaceWrapped env strategy p term =
         replaceWrapped (name : env) strategy p t
       Act n a -> void $ byNode $ wrapNodeZero $ Actor
         { inp      = p
-        , cur      = p
         , name     = n
         , arity    = a
         , function = resolveEffect n
@@ -168,7 +166,6 @@ compile env strategy p term =
         (v, name) <- bindName n
         void $ newNode Actor
           { inp      = v
-          , cur      = v
           , name     = n
           , arity    = 0
           , function = \_ out -> do
@@ -178,7 +175,6 @@ compile env strategy p term =
           }
         compile (name : env) strategy p t
       Act n a -> void $ newNode $ Actor { inp      = p
-                                        , cur      = p
                                         , name     = n
                                         , arity    = a
                                         , function = resolveEffect n

@@ -33,8 +33,8 @@ data NodeTP
         | Multiplexer {out :: Port, ins :: [Port]} -- only intermediate compilation result
         | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
         | Token       {inp, out :: Port}
-        -- technically effectful+curry is a different node (curry connection is a temporary state)
-        | Actor   {inp, cur :: Port, name :: T.Text, arity :: Int, function :: EffectFunctionTP, args :: [EffectData]}
+        | Actor       {inp :: Port, name :: T.Text, arity :: Int, function :: EffectFunctionTP, args :: [EffectData]}
+        | ActorC      {inp, cur :: Port, name :: T.Text, arity :: Int, function :: EffectFunctionTP, args :: [EffectData]}
         | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
 
 instance Eq NodeTP where
@@ -50,7 +50,8 @@ instance View [Port] NodeTP where
     Eraser { inp = i }                             -> [i]
     Duplicator { inp = i, out1 = o1, out2 = o2 }   -> [i, o1, o2]
     Multiplexer { out = o, ins = is }              -> o : is
-    Actor { inp = i, cur = c }                     -> [i, c]
+    Actor { inp = i }                              -> [i]
+    ActorC { inp = i, cur = c }                    -> [i, c]
     Redirector { portA = a, portB = b, portC = c } -> [a, b, c]
     Token { inp = i, out = o }                     -> [i, o]
     Data { inp = i }                               -> [i]
@@ -62,7 +63,8 @@ instance View [Port] NodeTP where
     Duplicator{} -> node { inp = i, out1 = o1, out2 = o2 }
       where [i, o1, o2] = ports
     Multiplexer{} -> node { out = o, ins = is } where o : is = ports
-    Actor{}       -> node { inp = i, cur = c } where [i, c] = ports
+    Actor{}       -> node { inp = i } where [i] = ports
+    ActorC{}      -> node { inp = i, cur = c } where [i, c] = ports
     Redirector{}  -> node { portA = a, portB = b, portC = c }
       where [a, b, c] = ports
     Token{} -> node { inp = i, out = o } where [i, o] = ports
@@ -80,6 +82,7 @@ pp node = case node of
   Duplicator { inp = i, out1 = o1, out2 = o2 } -> i
   Multiplexer { out = o, ins = is }            -> o
   Actor { inp = i }                            -> i
+  ActorC { inp = i }                           -> i
   Redirector { portA = a, direction = Top }    -> a
   Redirector { portB = b, direction = BottomRight } -> b
   Redirector { portC = c, direction = BottomLeft } -> c

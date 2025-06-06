@@ -63,7 +63,7 @@ identifier = T.pack <$> some (lowerChar <|> upperChar)
 
 -- | single mixfix operator
 operator :: Parser Identifier
-operator = T.pack <$> some (oneOf ("+-*/<>=?!&|" :: String))
+operator = T.pack <$> some (oneOf ("+-*/=?!&|" :: String))
 
 -- | infix function: <singleton> <operator> <singleton>
 -- TODO: make mixier
@@ -132,14 +132,18 @@ actionArity "readInt"  = 1
 actionArity "writeInt" = 1
 actionArity "equal"    = 2
 actionArity "add"      = 2
+actionArity "sub"      = 2
 actionArity _          = -1
 
 -- | side effect (TODO: temporary!)
 action :: Parser Term
 action =
   (\x -> Act x (actionArity x))
-    <$> (symbol "readInt" <|> symbol "writeInt" <|> symbol "equal" <|> symbol
-          "add"
+    <$> (   symbol "readInt"
+        <|> symbol "writeInt"
+        <|> symbol "equal"
+        <|> symbol "add"
+        <|> symbol "sub"
         )
 
 singleton :: Parser Term

@@ -57,6 +57,10 @@ newNode v = do
 	Unsafe.register n (inspect v)
 	return n
 
+-- | add a new node with value @n@ to the graph
+newNode' ∷ View [Port] n ⇒ n → Rewrite n ()
+newNode' v = newNode v >> return ()
+
 -- | Create a new node by cloning another, at the same time updating aspect @v@. When defining rewrites in a context where it is not known what type @n@ the nodes of the graph have, this is the only way to add new nodes to the graph.
 copyNode ∷ (View [Port] n, View v n) ⇒ Node → v → Rewrite n Node
 copyNode n f = newNode . update f =<< readNode n

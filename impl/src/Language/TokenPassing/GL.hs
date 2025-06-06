@@ -29,7 +29,8 @@ instance PortSpec NodeTP where
           , (Vector2 0.6 (-0.5)   , s)
           ]
         Redirector{}  -> [sd n, sd s, sd e]
-        Actor{}       -> [sd n, sd s]
+        Actor{}       -> [sd n]
+        ActorC{}      -> [sd n, sd s]
         Token{}       -> [sd n, sd s]
         Data{}        -> [sd n]
         Multiplexer{} -> [sd n, sd s]
@@ -69,6 +70,7 @@ renderNode node = drawPorts node >> case node of
   Redirector { direction = BottomRight } -> drawNode "@R"
   Redirector { direction = BottomLeft } -> drawNode "@L"
   Actor { name = n, arity = a }         -> drawNode $ T.unpack n <> show a
+  ActorC { name = n, arity = a } -> drawNode $ T.unpack n <> show a <> "c"
   Token{}                               -> drawNode "T"
   Data { dat = UnitData }               -> drawNode "()"
   Data { dat = StringData s }           -> drawNode $ "D=" <> s

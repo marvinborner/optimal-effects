@@ -199,17 +199,28 @@ duplicate = do
 
 initializeDataPartial :: (View [Port] n, View NodeTP n) => Rule n
 initializeDataPartial = do
-  act@(Actor { arity = n }) :-: Redirector { portA = f, portB = p, portC = a, direction = Top } <-
+  act@(Actor { name = nm, arity = n, function = func, args = as }) :-: Redirector { portA = f, portB = p, portC = a, direction = Top } <-
     activePair
   guard $ n > 0
-  replace $ byNode $ act { inp = a, cur = p }
+  replace $ byNode $ ActorC { inp      = a
+                            , cur      = p
+                            , name     = nm
+                            , arity    = n
+                            , function = func
+                            , args     = as
+                            }
 
 applyDataPartial :: (View [Port] n, View NodeTP n) => Rule n
 applyDataPartial = do
-  act@(Actor { args = as, cur = c, arity = n }) :-: Data { inp = p, dat = d } <-
+  act@(ActorC { name = nm, arity = n, function = func, args = as, cur = c }) :-: Data { inp = p, dat = d } <-
     activePair
   guard $ n > 0
-  replace $ byNode $ act { inp = c, args = d : as, arity = n - 1 }
+  replace $ byNode $ Actor { inp      = c
+                           , name     = nm
+                           , arity    = n - 1
+                           , function = func
+                           , args     = d : as
+                           }
 
 applyActorNode :: Rule (Layout.Wrapper NodeTP)
 applyActorNode = do

@@ -65,6 +65,7 @@ transform = \case
       let rec     = L.rec wrapped (unwrapClosure c rec)
       put $ ctx { stk = n : s, clo = rec : c }
       d <- transform next
+      put $ ctx { stk = s, clo = c }
       return $ L.app (L.lam d) rec
     | otherwise -> do
       ctx@(Context { stk = s, clo = c }) <- get
@@ -73,18 +74,25 @@ transform = \case
       let wrapped = wrap (length params) b
       put $ ctx { stk = n : s, clo = wrapped : c }
       d <- transform next
+      put $ ctx { stk = s, clo = c }
       return $ L.app (L.lam d) wrapped
-  If clause true false -> do
+  If clause true false -> do -- TODO: maybe we should also have a parallelIf? or would that just be fork
     clause' <- transform clause
-    true'   <- transform true
-    false'  <- transform false
-    return $ L.app (L.app clause' true') false'
+    true'   <- transform (Abs "_" true)
+    false'  <- transform (Abs "_" false)
+    return $ L.app (L.app (L.app clause' true') false') (L.dat UnitData)
   Var n -> do
     (Context { stk = s }) <- get
     let maybeIdx = elemIndex n s
     case maybeIdx of
       Nothing  -> throwError $ "Identifier not found: " <> T.unpack n
       Just idx -> return $ L.idx idx
+  Abs n t -> do
+    ctx@(Context { stk = s }) <- get
+    put $ ctx { stk = n : s }
+    t' <- transform t
+    put $ ctx { stk = s }
+    return $ L.lam t'
   App a b -> do
     a' <- transform a
     b' <- transform b

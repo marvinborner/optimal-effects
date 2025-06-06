@@ -1,5 +1,5 @@
 -- MIT License, Copyright (c) 2025 Marvin Borner
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFunctor, FlexibleInstances #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Data.Lambda
@@ -37,13 +37,17 @@ instance Show t => Show (TermF t) where
   showsPrec _ (Idx i)   = shows i
   showsPrec _ Tok       = showString "<"
   showsPrec _ Cot       = showString ">"
-  showsPrec _ (Rec _ _) = showString "REC"
-  showsPrec _ (Act n _) = shows n
+  showsPrec _ (Rec t _) = showString "([" <> shows t <> showString "] BOX)"
+  showsPrec _ (Act n _) = showString $ T.unpack n
   showsPrec _ (Dat d  ) = shows d
 
 deriveShow1 ''TermF
 
 type Term = Fix TermF
+
+-- ugly hack
+instance {-# OVERLAPPING #-} Show Term where
+  show (Fix t) = show t
 
 para :: Functor f => (f (Fix f, a) -> a) -> Fix f -> a
 para f (Fix fx) = f (fmap (\x -> (x, para f x)) fx)

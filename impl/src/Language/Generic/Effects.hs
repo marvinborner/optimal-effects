@@ -1,6 +1,7 @@
+-- Copyright (c) 2025, Marvin Borner
 {-# LANGUAGE FlexibleContexts #-}
 
-module Language.TokenPassing.Effects
+module Language.Generic.Effects
   ( resolveEffect
   , wrapNodeZero
   ) where
@@ -17,15 +18,9 @@ import           GraphRewriting.Layout.Wrapper as Layout
 import           GraphRewriting.Pattern
 import           GraphRewriting.Pattern.InteractionNet
 import           GraphRewriting.Rule
+import           Language.Generic.NodeTransformer
 
 import           Debug.Trace
-
-wrapNodeZero :: NodeTP -> Layout.Wrapper NodeTP
-wrapNodeZero n = Layout.Wrapper
-  { wRot    = Rotation 0
-  , wPos    = Position { position = Vector2 { v2x = 0, v2y = 0 } }
-  , wrappee = n
-  }
 
 churchTrue :: Edge -> Replace (Layout.Wrapper NodeTP) ()
 churchTrue edge = do
@@ -64,15 +59,22 @@ resolveEffect "writeInt" [NumberData n] edge = do
                                                               , dat = UnitData
                                                               }
   byNode $ wrapNodeZero Token { inp = edge, out = tok }
-resolveEffect "equal" [NumberData a, NumberData b] edge | a == b =
+resolveEffect "equal" [NumberData b, NumberData a] edge | a == b =
   trace ("equal: " <> show a <> " " <> show b) $ churchTrue edge
-resolveEffect "equal" [NumberData a, NumberData b] edge | a /= b =
+resolveEffect "equal" [NumberData b, NumberData a] edge | a /= b =
   trace ("not equal: " <> show a <> " " <> show b) $ churchFalse edge
-resolveEffect "add" [NumberData a, NumberData b] edge = do
+resolveEffect "add" [NumberData b, NumberData a] edge = do
   tok <- byEdge -- send token back!
   trace ("add: " <> show a <> " " <> show b) $ byNode $ wrapNodeZero Data
     { inp = tok
     , dat = NumberData (a + b)
+    }
+  byNode $ wrapNodeZero Token { inp = edge, out = tok }
+resolveEffect "sub" [NumberData b, NumberData a] edge = do
+  tok <- byEdge -- send token back!
+  trace ("sub: " <> show a <> " " <> show b) $ byNode $ wrapNodeZero Data
+    { inp = tok
+    , dat = NumberData (a - b)
     }
   byNode $ wrapNodeZero Token { inp = edge, out = tok }
 resolveEffect _ _ _ = error "invalid action"
