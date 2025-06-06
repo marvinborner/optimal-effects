@@ -1,6 +1,6 @@
 module Data.Effects where
 
-import           GraphRewriting.Layout.Wrapper as Layout
+import           GraphRewriting.Layout.Wrapper
 import           GraphRewriting.Rule
 
 data EffectData = StringData String | NumberData Int | UnitData

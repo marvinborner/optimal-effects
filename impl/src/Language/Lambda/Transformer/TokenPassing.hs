@@ -26,15 +26,18 @@ instance Semigroup Context where
   ctx@(Context { bindings = bs1 }) <> (Context { bindings = bs2 }) =
     ctx { bindings = bs1 <> bs2 }
 
-transformTokenPassing :: L.Term -> Either String (Graph NodeTP)
+-- transformTokenPassing
+--   :: (Generic.Node m ~ NodeTP n, Transformer m)
+--   => L.Term
+--   -> Either String (Graph (NodeTP n))
 transformTokenPassing term = do
   let (bindings, graph) = flip runGraph emptyGraph $ do
         context@(Context { port = n, bindings = bs }) <- compile term
-        o1 <- newEdge
-        i  <- newNode Initiator { out = o1 }
-        o2 <- newEdge
-        t  <- newNode Token { inp = o2, out = o1 }
-        mergeEdges o2 n
+        o1 <- edge
+        i  <- node Initiator { out = o1 }
+        o2 <- edge
+        t  <- node Token { inp = o2, out = o1 }
+        conn o2 n
         return bs
   when (any (\(x, _) -> x >= 0) bindings)
        (Left $ "term is open " <> show bindings)
@@ -42,10 +45,14 @@ transformTokenPassing term = do
 
 -- we use a para instead cata to expand the original term within rec
 -- TODO: translate token by app match
-compile
-  :: (Transformer m, Generic.Node m ~ NodeTP, View [Port] NodeTP)
-  => L.Term
-  -> m Context
+-- compile
+--   :: (Transformer m, Generic.Node m ~ NodeTP, View [Port] NodeTP)
+--   => L.Term
+--   -> m Context
+-- compile
+--   :: (Generic.Node m ~ NodeTP w, Transformer m)
+--   => L.Term
+--   -> m Context
 compile = para $ \case
   L.Lam (_, t) -> do
     ctx@(Context { bindings = bs, port = p }) <- t
@@ -78,10 +85,10 @@ compile = para $ \case
       , name     = "rec"
       , arity    = 0
       , function = \_ o2 -> do
-                     tok                    <- byEdge -- bounce token
+                     tok                    <- edge -- bounce token
                      (Context { port = p }) <- compile rec
-                     byWire p tok
-                     byNode $ wrapNodeZero Token { inp = tok, out = o2 }
+                     conn p tok
+                     node Token { inp = tok, out = o2 }
       }
     conn x r -- bind x to rec
     let bs' = (\(i, e) -> (i - 1, e)) <$> bs
@@ -103,10 +110,11 @@ compile = para $ \case
 
 -- | create multiplexer of all =0 bindings
 -- TODO: we could additionally return a new context with the popped bindings
-bindName
-  :: (Transformer m, Generic.Node m ~ NodeTP, View [Port] NodeTP)
-  => Context
-  -> m Edge
+-- bindName
+--   :: (Transformer m, Generic.Node m ~ NodeTP, View [Port] NodeTP)
+--   => Context
+--   -> m Edge
+-- bindName :: (Generic.Node m ~ NodeTP n, Transformer m) => Context -> m Edge
 bindName (Context { bindings = bs }) = do
   x <- edge
   let bound = snd <$> filter (\(i, _) -> i == 0) bs

@@ -16,13 +16,28 @@ import           Data.Maybe                     ( fromJust )
 import qualified Data.Text                     as T
 import           Data.TokenPassing
 import           GraphRewriting.Graph.Read
+                                         hiding ( Node )
 import           GraphRewriting.Graph.Write
+                                         hiding ( Node )
 import           GraphRewriting.Layout.Wrapper as Layout
+                                         hiding ( Node )
 import           GraphRewriting.Pattern
 import           GraphRewriting.Pattern.InteractionNet
 import           GraphRewriting.Rule
+import           GraphRewriting.Strategies.Control
+                                               as Control
 
-compileShare :: (View [Port] n, View NodeTP n) => Rule n
+import           Language.Generic.NodeTransformer
+                                         hiding ( edge
+                                                , node
+                                                )
+
+compileShare
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 compileShare = do
   Multiplexer { out = o, ins = is } <- node
   case is of
@@ -49,7 +64,12 @@ split i n xs = let (x, xs') = splitAt i xs in x : split i n xs'
 transpose' n [] = replicate n []
 transpose' n xs = transpose xs
 
-commute :: (View [Port] n, View NodeTP n) => Rule n
+commute
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 commute = do
   n1 :-: n2 <- activePair
   require (n1 /= n2) -- TODO: replace by linear
@@ -84,7 +104,12 @@ commute = do
       Abstractor{} -> me { level = level me + 1 }
       _            -> me
 
-annihilate :: (View [Port] n, View NodeTP n) => Rule n
+annihilate
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 annihilate = do
   n1 :-: n2 <- activePair
   require (n1 == n2)
@@ -92,7 +117,12 @@ annihilate = do
   let aux2 = pp n2 `delete` inspect n2
   rewire $ [ [a1, a2] | (a1, a2) <- aux1 `zip` aux2 ]
 
-eliminateDuplicator :: (View [Port] n, View NodeTP n) => Rule n
+eliminateDuplicator
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 eliminateDuplicator = do
   Eraser { inp = iE }                           <- node
   Duplicator { inp = iD, out1 = o1, out2 = o2 } <- neighbour =<< previous
@@ -107,7 +137,12 @@ reflectsToken _                   = False
 isToken Token{} = True
 isToken _       = False
 
-reflectToken :: (View [Port] n, View NodeTP n) => Rule n
+reflectToken
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 reflectToken = do
   reflector :-: tok@(Token { inp = iT, out = oT }) <- activePair
   guard $ reflectsToken reflector
@@ -115,7 +150,12 @@ reflectToken = do
     byNode $ reflector { inp = iT }
     byNode $ tok { inp = oT, out = iT }
 
-redirectToken :: (View [Port] n, View NodeTP n) => Rule n
+redirectToken
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 redirectToken = do
   red@(Redirector { portA = a, portB = b, portC = c, direction = r }) :-: tok@(Token { inp = iT, out = oT }) <-
     activePair
@@ -134,13 +174,18 @@ redirectToken = do
       byNode $ red { portA = oT, portB = v, direction = Top }
 
 -- TODO: should this basically almost be !reflectsToken ??
-hasActionPotential :: NodeTP -> Bool
+hasActionPotential :: (NodeTP n) -> Bool
 hasActionPotential (Redirector { direction = BottomRight }) = True
 hasActionPotential (Actor{}) = True
 hasActionPotential (Data{} ) = False -- Must be False or possible loops with T-App
 hasActionPotential _         = False
 
-backpropagateActor :: (View [Port] n, View NodeTP n) => Rule n
+backpropagateActor
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 backpropagateActor = do -- ==> there is an action somewhere inside b
   a@(Redirector { direction = BottomLeft }) :-: b <- activePair
   guard $ hasActionPotential b
@@ -149,7 +194,12 @@ backpropagateActor = do -- ==> there is an action somewhere inside b
     byNode b
 
 -- TODO: is this fully correct?
-backpropagateActor2 :: (View [Port] n, View NodeTP n) => Rule n
+backpropagateActor2
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 backpropagateActor2 = do -- ==> there is an action somewhere inside b
   a@(Redirector { direction = Top }) :-: b <- activePair
   guard $ hasActionPotential b
@@ -157,7 +207,12 @@ backpropagateActor2 = do -- ==> there is an action somewhere inside b
     byNode $ a { direction = BottomRight }
     byNode b
 
-backpropagateUneffectful :: (View [Port] n, View NodeTP n) => Rule n
+backpropagateUneffectful
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 backpropagateUneffectful = do -- ==> there is no immediate action potential in b
   a@(Redirector { direction = BottomLeft }) :-: b <- activePair
   guard $ not $ hasActionPotential b
@@ -185,19 +240,34 @@ backpropagateUneffectful = do -- ==> there is no immediate action potential in b
 --     byNode $ red { direction = Top } -- everything else stays!
 --     byNode n
 
-eraser :: (View [Port] n, View NodeTP n) => Rule n
+eraser
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 eraser = do
   rewrite  <- commute
   Eraser{} <- liftReader . inspectNode =<< previous
   return rewrite
 
-duplicate :: (View [Port] n, View NodeTP n) => Rule n
+duplicate
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 duplicate = do
   rewrite      <- commute
   Duplicator{} <- liftReader . inspectNode =<< previous
   return rewrite
 
-initializeDataPartial :: (View [Port] n, View NodeTP n) => Rule n
+initializeDataPartial
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 initializeDataPartial = do
   act@(Actor { name = nm, arity = n, function = func, args = as }) :-: Redirector { portA = f, portB = p, portC = a, direction = Top } <-
     activePair
@@ -210,7 +280,15 @@ initializeDataPartial = do
                             , args     = as
                             }
 
-applyDataPartial :: (View [Port] n, View NodeTP n) => Rule n
+-- applyDataPartial :: forall n . (View [Port] (NodeTP n)) => Rule (NodeTP n)
+-- applyDataPartial
+--   :: (View [Port] n, View (NodeTP Layout.Wrapper) n) => Rule (Layout.Wrapper n)
+applyDataPartial
+  :: ( View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 applyDataPartial = do
   act@(ActorC { name = nm, arity = n, function = func, args = as, cur = c }) :-: Data { inp = p, dat = d } <-
     activePair
@@ -222,7 +300,10 @@ applyDataPartial = do
                            , args     = d : as
                            }
 
-applyActorNode :: Rule (Layout.Wrapper NodeTP)
+applyActorNode
+  :: forall w
+   . (View [Port] (w (NodeTP w)), View (NodeTP w) (w (NodeTP w)))
+  => Rule (w (NodeTP w))
 applyActorNode = do
   (Token { out = p, inp = i }) :-: (Actor { function = f, args = a, arity = 0 }) <-
     activePair
@@ -231,10 +312,20 @@ applyActorNode = do
 class EffectApplicable n where
   applyEffect :: Rule n
 
-instance EffectApplicable (Layout.Wrapper NodeTP) where
-  applyEffect = applyActorNode
+instance {-# Overlapping #-} EffectApplicable (Layout.Wrapper (NodeTP Layout.Wrapper)) where
+  applyEffect = applyActorNode :: Rule (Layout.Wrapper (NodeTP Layout.Wrapper))
 
-applyActor :: (EffectApplicable n, View [Port] n, View NodeTP n) => Rule n
+instance {-# Overlapping #-} EffectApplicable (Control.Wrapper (NodeTP Control.Wrapper)) where
+  applyEffect =
+    applyActorNode :: Rule (Control.Wrapper (NodeTP Control.Wrapper))
+
+applyActor
+  :: ( EffectApplicable n
+     , View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => Rule n
 applyActor = do
   act <- applyEffect
   -- optional $ exhaustive compileShare -- TODO!

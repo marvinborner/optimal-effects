@@ -15,7 +15,7 @@ import           GraphRewriting.Layout.PortSpec
 import           GraphRewriting.Strategies.Control
 import qualified Graphics.UI.GLUT              as GL
 
-instance PortSpec NodeTP where
+instance PortSpec (NodeTP n) where
   portSpec node =
     let sd = sameDir
     in
@@ -46,7 +46,7 @@ instance PortSpec NodeTP where
       Vector2 (x1 * x + x2 * y) (y1 * x + y2 * y)
     sws = Vector2 (-0.7) (-0.7)
 
-instance Render NodeTP where
+instance Render (NodeTP n) where
   render = renderNode
 
 instance Render n => Render (Wrapper n) where
@@ -77,7 +77,7 @@ renderNode node = drawPorts node >> case node of
   Data { dat = NumberData n }           -> drawNode $ "D=" <> show n
   Multiplexer{}                         -> drawNode "M"
 
-drawPorts :: NodeTP -> IO ()
+drawPorts :: (NodeTP n) -> IO ()
 drawPorts n = sequence_
   [ drawPort (factor p) pos | (pos, p) <- positions `zip` ports ] where
   positions = relPortPos n

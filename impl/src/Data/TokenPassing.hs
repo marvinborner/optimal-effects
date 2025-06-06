@@ -3,7 +3,7 @@
 -- Copyright (c) 2010, Jan Rochel
 -- Copyright (c) 2024, Marvin Borner
 
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE KindSignatures, UndecidableInstances, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses #-}
 module Data.TokenPassing
   ( NodeTP(..)
   , AppDir(..)
@@ -22,10 +22,10 @@ import           GraphRewriting.Rule
 
 data AppDir = Top | BottomLeft | BottomRight
 
-type EffectFunctionTP = EffectFunction (Layout.Wrapper NodeTP)
+type EffectFunctionTP w = EffectFunction (w (NodeTP w))
 
 -- | The signature of our graph
-data NodeTP
+data NodeTP w
         = Initiator   {out :: Port}
         | Abstractor  {inp, body, var :: Port}
         | Eraser      {inp :: Port}
@@ -33,17 +33,21 @@ data NodeTP
         | Multiplexer {out :: Port, ins :: [Port]} -- only intermediate compilation result
         | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
         | Token       {inp, out :: Port}
-        | Actor       {inp :: Port, name :: T.Text, arity :: Int, function :: EffectFunctionTP, args :: [EffectData]}
-        | ActorC      {inp, cur :: Port, name :: T.Text, arity :: Int, function :: EffectFunctionTP, args :: [EffectData]}
+        | Actor       {inp :: Port, name :: T.Text, arity :: Int, function :: EffectFunctionTP w, args :: [EffectData]}
+        | ActorC      {inp, cur :: Port, name :: T.Text, arity :: Int, function :: EffectFunctionTP w, args :: [EffectData]}
         | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
 
-instance Eq NodeTP where
+instance Eq (NodeTP w) where
   Eraser{}                  == Eraser{}                       = True
   Abstractor{}              == Redirector { direction = Top } = True -- both CON in SIC!
   Duplicator { level = l1 } == Duplicator { level = l2 }      = l1 == l2
   _                         == _                              = False
 
-instance View [Port] NodeTP where
+-- instance {-# Incoherent #-} View (NodeTP w) (NodeTP Layout.Wrapper)
+
+-- instance View (w (NodeTP w)) (NodeTP Layout.Wrapper)
+
+instance View [Port] (NodeTP w) where
   inspect node = case node of
     Initiator { out = o }                          -> [o]
     Abstractor { inp = i, body = b, var = v }      -> [i, b, v]
@@ -70,11 +74,11 @@ instance View [Port] NodeTP where
     Token{} -> node { inp = i, out = o } where [i, o] = ports
     Data{}  -> node { inp = i } where [i] = ports
 
-instance INet NodeTP where
+instance INet (NodeTP w) where
   principalPort = pp
 
 -- The number is an index that specifies which port is the principal port out of the list of ports
-pp :: NodeTP -> Port
+pp :: NodeTP w -> Port
 pp node = case node of
   Initiator { out = o }                        -> o
   Abstractor { inp = i, body = b, var = v }    -> i

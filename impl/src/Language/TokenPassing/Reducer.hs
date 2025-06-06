@@ -3,14 +3,16 @@
 -- Copyright (c) 2010, Jan Rochel
 -- Copyright (c) 2024, Marvin Borner
 
-{-# LANGUAGE FlexibleContexts, FlexibleInstances #-}
+{-# LANGUAGE TypeApplications, FlexibleContexts, FlexibleInstances #-}
 
 module Language.TokenPassing.Reducer
-  ( nf
-  , visualize
+  ( visualize
+  -- , bench
   ) where
 
+import           Data.Foldable                  ( toList )
 import           Data.TokenPassing
+import           Data.Traversable               ( mapAccumL )
 import           Data.Vector.V2                 ( Vector2(..) )
 import           GraphRewriting.GL.Render
 import           GraphRewriting.GL.UI          as UI
@@ -52,28 +54,74 @@ layoutStep n = do
     rot <- angularMomentum n
     return (cgf, cf, sf, rot)
   Unsafe.adjustNode n
-    $ Position
+    $ Position -- TODO: find good values
     . sf (\x -> min 1000 (x * 0.9))
     . cgf (\x -> min 10000 (x * 0.01))
     . cf (\x -> min 10000 (100 / (x ^ 2 + 0.1)))
     . position
   Unsafe.adjustNode n $ rot (* 0.9)
 
--- | Reduce graph to normal form
-nf :: Graph NodeTP -> Graph NodeTP
-nf term = term
+-- layoutTree
+--   :: ( EffectApplicable n
+--      , View [Port] n
+--      , View (NodeTP Layout.Wrapper) n
+--      , View (Layout.Wrapper (NodeTP Layout.Wrapper)) n
+--      )
+--   => LabelledTree (Rule n)
+layoutTree = ruleTree
 
 -- | Visualize reduction to normal form
 -- TODO: only app should use IO
-visualize :: Graph NodeTP -> IO ()
+visualize :: Graph (NodeTP Layout.Wrapper) -> IO ()
 visualize term = do
   (_, _) <- UI.initialise
-  let hypergraph  = execGraph (apply $ exhaustive compileShare) term
+  let hypergraph = execGraph
+        (apply $ exhaustive (compileShare @(NodeTP Layout.Wrapper)))
+        term
   let layoutGraph = Layout.wrapGraph hypergraph
-  UI.run 50 id layoutStep layoutGraph ruleTree
+  UI.run 50 id layoutStep layoutGraph layoutTree
 
+-- from LambdaScope/GraphRewriting
+incIndex :: Int -> [Int] -> [Int]
+incIndex 0 (i : is) = i + 1 : is
+incIndex 0 []       = [1]
+incIndex n (i : is) = i : incIndex (n - 1) is
+incIndex n []       = 0 : incIndex (n - 1) []
+
+-- from LambdaScope/GraphRewriting
+-- bench :: forall w . Graph (NodeTP w) -> IO ()
+-- bench term = do
+--   (_, _) <- UI.initialise
+--   let hypergraph = execGraph (apply $ exhaustive compileShare) term
+--   let indices =
+--         evalGraph (benchmark $ toList ruleTree) (Control.wrapGraph hypergraph)
+--         --(Control.wrapGraph hypergraph) -- derive control?? TODO
+--   print indices
+--   let indexTable = foldl (flip incIndex) [] indices
+--   let (_, numTree) =
+--         mapAccumL (\(i : is) _ -> (is, i)) (indexTable ++ repeat 0) ruleTree
+--   putStrLn $ showLabelledTree 2 0 (+) numTree
+
+-- ruleTree
+--   :: (EffectApplicable n, forall w . View (NodeTP w) n, View [Port] n)
+--   => LabelledTree (Rule n)
+-- ruleTree
+--   :: (EffectApplicable n, View (NodeTP Layout.Wrapper) n, View [Port] n)
+--   => LabelledTree (Rule n)
 ruleTree
-  :: (EffectApplicable n, View NodeTP n, View [Port] n) => LabelledTree (Rule n)
+  :: ( EffectApplicable n
+     , View [Port] n
+     , forall w . View (NodeTP w) n
+     , forall w . View (w (NodeTP w)) n
+     )
+  => LabelledTree (Rule n)
+-- ruleTree
+--   :: forall w
+--    . ( EffectApplicable (w (NodeTP w))
+--      , View [Port] (w (NodeTP w))
+--      , View (NodeTP w) (w (NodeTP w))
+--      )
+--   => LabelledTree (Rule (w (NodeTP w)))
 ruleTree = Branch
   "All"
   [ Leaf "Duplicate"   duplicate
