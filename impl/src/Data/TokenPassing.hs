@@ -11,8 +11,9 @@ module Data.TokenPassing
   ) where
 
 import           Data.Effects                   ( EffectData
-                                                , EffectFunction
                                                 )
+import qualified Data.Lambda                   as Lambda
+                                                ( Term )
 import qualified Data.Text                     as T
 import           Data.View
 import           GraphRewriting.Graph.Types
@@ -22,10 +23,8 @@ import           GraphRewriting.Rule
 
 data AppDir = Top | BottomLeft | BottomRight
 
-type EffectFunctionTP w = EffectFunction (w (NodeTP w))
-
 -- | The signature of our graph
-data NodeTP w
+data NodeTP
         = Initiator   {out :: Port}
         | Abstractor  {inp, body, var :: Port}
         | Eraser      {inp :: Port}
@@ -33,21 +32,18 @@ data NodeTP w
         | Multiplexer {out :: Port, ins :: [Port]} -- only intermediate compilation result
         | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
         | Token       {inp, out :: Port}
-        | Actor       {inp :: Port, name :: T.Text, arity :: Int, function :: EffectFunctionTP w, args :: [EffectData]}
-        | ActorC      {inp, cur :: Port, name :: T.Text, arity :: Int, function :: EffectFunctionTP w, args :: [EffectData]}
+        | Actor       {inp :: Port, name :: T.Text, arity :: Int, args :: [EffectData]}
+        | ActorC      {inp, cur :: Port, name :: T.Text, arity :: Int, args :: [EffectData]}
+        | Recursor    {inp :: Port, boxed :: Lambda.Term }
         | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
 
-instance Eq (NodeTP w) where
+instance Eq NodeTP where
   Eraser{}                  == Eraser{}                       = True
   Abstractor{}              == Redirector { direction = Top } = True -- both CON in SIC!
   Duplicator { level = l1 } == Duplicator { level = l2 }      = l1 == l2
   _                         == _                              = False
 
--- instance {-# Incoherent #-} View (NodeTP w) (NodeTP Layout.Wrapper)
-
--- instance View (w (NodeTP w)) (NodeTP Layout.Wrapper)
-
-instance View [Port] (NodeTP w) where
+instance View [Port] NodeTP where
   inspect node = case node of
     Initiator { out = o }                          -> [o]
     Abstractor { inp = i, body = b, var = v }      -> [i, b, v]
@@ -56,6 +52,7 @@ instance View [Port] (NodeTP w) where
     Multiplexer { out = o, ins = is }              -> o : is
     Actor { inp = i }                              -> [i]
     ActorC { inp = i, cur = c }                    -> [i, c]
+    Recursor { inp = i }                           -> [i]
     Redirector { portA = a, portB = b, portC = c } -> [a, b, c]
     Token { inp = i, out = o }                     -> [i, o]
     Data { inp = i }                               -> [i]
@@ -69,16 +66,17 @@ instance View [Port] (NodeTP w) where
     Multiplexer{} -> node { out = o, ins = is } where o : is = ports
     Actor{}       -> node { inp = i } where [i] = ports
     ActorC{}      -> node { inp = i, cur = c } where [i, c] = ports
+    Recursor{}    -> node { inp = i } where [i] = ports
     Redirector{}  -> node { portA = a, portB = b, portC = c }
       where [a, b, c] = ports
     Token{} -> node { inp = i, out = o } where [i, o] = ports
     Data{}  -> node { inp = i } where [i] = ports
 
-instance INet (NodeTP w) where
+instance INet NodeTP where
   principalPort = pp
 
 -- The number is an index that specifies which port is the principal port out of the list of ports
-pp :: NodeTP w -> Port
+pp :: NodeTP -> Port
 pp node = case node of
   Initiator { out = o }                        -> o
   Abstractor { inp = i, body = b, var = v }    -> i
@@ -87,6 +85,7 @@ pp node = case node of
   Multiplexer { out = o, ins = is }            -> o
   Actor { inp = i }                            -> i
   ActorC { inp = i }                           -> i
+  Recursor { inp = i }                         -> i
   Redirector { portA = a, direction = Top }    -> a
   Redirector { portB = b, direction = BottomRight } -> b
   Redirector { portC = c, direction = BottomLeft } -> c

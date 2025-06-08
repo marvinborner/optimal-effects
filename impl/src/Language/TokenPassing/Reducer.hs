@@ -61,25 +61,14 @@ layoutStep n = do
     . position
   Unsafe.adjustNode n $ rot (* 0.9)
 
--- layoutTree
---   :: ( EffectApplicable n
---      , View [Port] n
---      , View (NodeTP Layout.Wrapper) n
---      , View (Layout.Wrapper (NodeTP Layout.Wrapper)) n
---      )
---   => LabelledTree (Rule n)
-layoutTree = ruleTree
-
 -- | Visualize reduction to normal form
 -- TODO: only app should use IO
-visualize :: Graph (NodeTP Layout.Wrapper) -> IO ()
+visualize :: Graph NodeTP -> IO ()
 visualize term = do
   (_, _) <- UI.initialise
-  let hypergraph = execGraph
-        (apply $ exhaustive (compileShare @(NodeTP Layout.Wrapper)))
-        term
+  let hypergraph  = execGraph (apply $ exhaustive compileShare) term
   let layoutGraph = Layout.wrapGraph hypergraph
-  UI.run 50 id layoutStep layoutGraph layoutTree
+  UI.run 50 id layoutStep layoutGraph ruleTree
 
 -- from LambdaScope/GraphRewriting
 incIndex :: Int -> [Int] -> [Int]
@@ -89,39 +78,20 @@ incIndex n (i : is) = i : incIndex (n - 1) is
 incIndex n []       = 0 : incIndex (n - 1) []
 
 -- from LambdaScope/GraphRewriting
--- bench :: forall w . Graph (NodeTP w) -> IO ()
--- bench term = do
---   (_, _) <- UI.initialise
---   let hypergraph = execGraph (apply $ exhaustive compileShare) term
---   let indices =
---         evalGraph (benchmark $ toList ruleTree) (Control.wrapGraph hypergraph)
---         --(Control.wrapGraph hypergraph) -- derive control?? TODO
---   print indices
---   let indexTable = foldl (flip incIndex) [] indices
---   let (_, numTree) =
---         mapAccumL (\(i : is) _ -> (is, i)) (indexTable ++ repeat 0) ruleTree
---   putStrLn $ showLabelledTree 2 0 (+) numTree
+bench :: Graph NodeTP -> IO ()
+bench term = do
+  (_, _) <- UI.initialise
+  let hypergraph = execGraph (apply $ exhaustive compileShare) term
+  let indices =
+        evalGraph (benchmark $ toList ruleTree) (Control.wrapGraph hypergraph)
+  print indices
+  let indexTable = foldl (flip incIndex) [] indices
+  let (_, numTree) = mapAccumL (\(i : is) _ -> (is, i))
+                               (indexTable ++ repeat 0)
+                               (ruleTree @(Control.Wrapper NodeTP))
+  putStrLn $ showLabelledTree 2 0 (+) numTree
 
--- ruleTree
---   :: (EffectApplicable n, forall w . View (NodeTP w) n, View [Port] n)
---   => LabelledTree (Rule n)
--- ruleTree
---   :: (EffectApplicable n, View (NodeTP Layout.Wrapper) n, View [Port] n)
---   => LabelledTree (Rule n)
-ruleTree
-  :: ( EffectApplicable n
-     , View [Port] n
-     , forall w . View (NodeTP w) n
-     , forall w . View (w (NodeTP w)) n
-     )
-  => LabelledTree (Rule n)
--- ruleTree
---   :: forall w
---    . ( EffectApplicable (w (NodeTP w))
---      , View [Port] (w (NodeTP w))
---      , View (NodeTP w) (w (NodeTP w))
---      )
---   => LabelledTree (Rule (w (NodeTP w)))
+ruleTree :: (View NodeTP n, View [Port] n) => LabelledTree (Rule n)
 ruleTree = Branch
   "All"
   [ Leaf "Duplicate"   duplicate
@@ -132,6 +102,7 @@ ruleTree = Branch
   , Branch
     "Effective"
     [ Leaf "Apply Actor"                    applyActor
+    , Leaf "Apply Recursor"                 applyRecursor
     , Leaf "Redirect Token"                 redirectToken
     , Leaf "Reflect Token"                  reflectToken
     -- , Leaf "Passthrough Right"              passthroughRight

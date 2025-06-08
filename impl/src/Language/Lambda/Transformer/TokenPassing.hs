@@ -1,8 +1,9 @@
 -- Copyright (c) 2025, Marvin Borner
-{-# LANGUAGE FlexibleContexts, TypeOperators #-}
+{-# LANGUAGE TypeApplications, FlexibleContexts, TypeOperators #-}
 
 module Language.Lambda.Transformer.TokenPassing
   ( transformTokenPassing
+  , executeRecursor
   ) where
 
 import           Control.Monad.State
@@ -11,11 +12,11 @@ import qualified Data.Lambda                   as L
 import           Data.TokenPassing
 import           GraphRewriting.Graph
 import           GraphRewriting.Graph.Write
+import           GraphRewriting.Pattern
 import           GraphRewriting.Rule
 import           Language.Generic.Effects
-import qualified Language.Generic.NodeTransformer
-                                               as Generic
-import           Language.Generic.NodeTransformer
+
+import           Data.Coerce
 
 data Context = Context
   { bindings :: [(Int, Edge)]
@@ -26,18 +27,18 @@ instance Semigroup Context where
   ctx@(Context { bindings = bs1 }) <> (Context { bindings = bs2 }) =
     ctx { bindings = bs1 <> bs2 }
 
--- transformTokenPassing
---   :: (Generic.Node m ~ NodeTP n, Transformer m)
---   => L.Term
---   -> Either String (Graph (NodeTP n))
+transformTokenPassing :: L.Term -> Either String (Graph NodeTP)
 transformTokenPassing term = do
   let (bindings, graph) = flip runGraph emptyGraph $ do
-        context@(Context { port = n, bindings = bs }) <- compile term
-        o1 <- edge
-        i  <- node Initiator { out = o1 }
-        o2 <- edge
-        t  <- node Token { inp = o2, out = o1 }
-        conn o2 n
+        context@(Context { port = n, bindings = bs }) <- compile newNode
+                                                                 newEdge
+                                                                 mergeEdges
+                                                                 term
+        o1 <- newEdge
+        i  <- newNode Initiator { out = o1 }
+        o2 <- newEdge
+        t  <- newNode Token { inp = o2, out = o1 }
+        mergeEdges o2 n
         return bs
   when (any (\(x, _) -> x >= 0) bindings)
        (Left $ "term is open " <> show bindings)
@@ -45,19 +46,18 @@ transformTokenPassing term = do
 
 -- we use a para instead cata to expand the original term within rec
 -- TODO: translate token by app match
--- compile
---   :: (Transformer m, Generic.Node m ~ NodeTP, View [Port] NodeTP)
---   => L.Term
---   -> m Context
--- compile
---   :: (Generic.Node m ~ NodeTP w, Transformer m)
---   => L.Term
---   -> m Context
-compile = para $ \case
+compile
+  :: Monad m
+  => (NodeTP -> m a1)
+  -> m Port
+  -> (Port -> Port -> m a2)
+  -> L.Term
+  -> m Context
+compile node edge conn = para $ \case
   L.Lam (_, t) -> do
     ctx@(Context { bindings = bs, port = p }) <- t
     o <- edge
-    x <- bindName ctx
+    x <- bindName node edge conn ctx
     node Abstractor { inp = o, body = p, var = x }
     let bs' = (\(i, e) -> (i - 1, e)) <$> bs
     return $ ctx { bindings = bs', port = o }
@@ -78,29 +78,15 @@ compile = para $ \case
     -- since f must always be an abstraction, we let the application to rec interact immediately
     -- this way, we don't end in endless recursion when the rec always gets unwrapped by the token
     ctx@(Context { bindings = bs, port = p }) <- f
-    x <- bindName ctx
+    x <- bindName node edge conn ctx
     r <- edge -- rec
-    node Actor
-      { inp      = r
-      , name     = "rec"
-      , arity    = 0
-      , function = \_ o2 -> do
-                     tok                    <- edge -- bounce token
-                     (Context { port = p }) <- compile rec
-                     conn p tok
-                     node Token { inp = tok, out = o2 }
-      }
+    node Recursor { inp = r, boxed = rec }
     conn x r -- bind x to rec
     let bs' = (\(i, e) -> (i - 1, e)) <$> bs
     return $ ctx { bindings = bs', port = p }
   L.Act n a -> do
     o <- edge
-    node $ Actor { inp      = o
-                 , name     = n
-                 , arity    = a
-                 , function = resolveEffect n
-                 , args     = []
-                 }
+    node $ Actor { inp = o, name = n, arity = a, args = [] }
     return $ Context { port = o, bindings = [] }
   L.Dat d -> do
     o <- edge
@@ -110,13 +96,16 @@ compile = para $ \case
 
 -- | create multiplexer of all =0 bindings
 -- TODO: we could additionally return a new context with the popped bindings
--- bindName
---   :: (Transformer m, Generic.Node m ~ NodeTP, View [Port] NodeTP)
---   => Context
---   -> m Edge
--- bindName :: (Generic.Node m ~ NodeTP n, Transformer m) => Context -> m Edge
-bindName (Context { bindings = bs }) = do
+bindName :: Monad m => (NodeTP -> m a) -> m Port -> p -> Context -> m Port
+bindName node edge conn (Context { bindings = bs }) = do
   x <- edge
   let bound = snd <$> filter (\(i, _) -> i == 0) bs
   node Multiplexer { out = x, ins = bound }
   return x
+
+executeRecursor :: (View [Port] n, View NodeTP n) => L.Term -> Port -> Rule n
+executeRecursor boxed o = replace $ do
+  tok                    <- byEdge
+  (Context { port = p }) <- compile byNode byEdge byWire boxed
+  byWire p tok
+  byNode Token { inp = tok, out = o }
