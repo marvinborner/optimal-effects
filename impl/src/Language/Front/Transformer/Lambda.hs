@@ -40,6 +40,7 @@ isRecursive n = \case
   UnitV       -> False
   Num _       -> False
   Act _ _     -> False
+  Do (Prim t) -> isRecursive n t
   Do (Unit t) -> isRecursive n t
   Do (Bind n' t a) | n == n'   -> isRecursive n t
                    | otherwise -> isRecursive n t || isRecursive n (Do a)
@@ -97,10 +98,22 @@ transform = \case
     a' <- transform a
     b' <- transform b
     return $ L.app a' b'
-  Num n   -> return $ L.dat $ NumberData n
-  UnitV   -> return $ L.dat UnitData
-  Act a n -> return $ L.act a n
-  t       -> error $ show t
+  Num n           -> return $ L.dat $ NumberData n
+  UnitV           -> return $ L.dat UnitData
+  Act a n         -> return $ L.act a n
+
+  Do (Bind v t n) -> do
+    ctx@(Context { stk = s }) <- get
+    t'                        <- transform t
+    put $ ctx { stk = v : s }
+    n' <- transform (Do n)
+    return $ L.bnd t' (L.lam n')
+  Do (Unit t) -> do
+    t' <- transform t
+    return $ L.eta t'
+  Do (Prim t) -> transform t
+
+  t           -> error $ show t
 
 transformLambda :: Term -> Either String L.Term
 transformLambda t =

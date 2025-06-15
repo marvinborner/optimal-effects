@@ -89,7 +89,7 @@ ifElse = do
 -- | bind: <identifier> <- <term>
 -- | unit: <term>
 doAction :: Parser Action
-doAction = try bind <|> unit
+doAction = try bind <|> try unit <|> prim
  where
   bind = do
     name <- lexeme identifier
@@ -97,7 +97,11 @@ doAction = try bind <|> unit
     t    <- lexemeN term
     next <- doAction
     return $ Bind name t next
-  unit = Unit <$> lexemeN term
+  unit = do
+    _ <- symbol "return"
+    t <- lexeme term
+    return $ Unit t
+  prim = Prim <$> lexemeN term
 
 -- | do block: do ( <doAction>+ )
 doBlock :: Parser Term

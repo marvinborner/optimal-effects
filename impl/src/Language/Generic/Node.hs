@@ -1,4 +1,5 @@
 -- Copyright (c) 2025, Marvin Borner
+{-# LANGUAGE FlexibleContexts #-}
 
 module Language.Generic.Node
   ( GenericNode(..)
@@ -8,9 +9,11 @@ import           Data.Effects                   ( EffectData )
 import qualified Data.Lambda                   as Lambda
                                                 ( Term )
 import qualified Data.Text                     as T
+import           Data.View
 import           GraphRewriting.Graph.Types
+import           GraphRewriting.Pattern.InteractionNet
 
-class GenericNode n where
+class (Eq n, INet n, View [Port] n) => GenericNode n where
   gInitiator   :: Port -> n
   gApplicator  :: Port -> Port -> Port -> n
   gAbstractor  :: Port -> Port -> Port -> n
@@ -22,3 +25,17 @@ class GenericNode n where
   gActorC      :: Port -> Port -> T.Text -> Int -> [EffectData] -> n
   gRecursor    :: Port -> Lambda.Term -> n
   gData        :: Port -> EffectData -> n
+
+  gpp :: n -> Port
+
+  isInitiator :: n -> Bool
+  isApplicator :: n -> Bool
+  isAbstractor :: n -> Bool
+  isEraser :: n -> Bool
+  isDuplicator :: n -> Bool
+  isMultiplexer :: n -> Bool
+  isToken :: n -> Bool
+  isActor :: n -> Bool
+  isActorC :: n -> Bool
+  isRecursor :: n -> Bool
+  isData :: n -> Bool

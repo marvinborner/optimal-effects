@@ -71,13 +71,21 @@ k
 -- x <>
 
 -- actions are only executed when foo itself is forced
-foo = if (equal (readInt <>) 41)
-  then (
-    a x = (writeInt 1)
-    a
-  )
-  else (
-    b y = (writeInt 0)
-    b
-  )
+-- foo = if (equal (readInt <>) 41)
+--   then (
+--     a x = (writeInt 1)
+--     a
+--   )
+--   else (
+--     b y = (writeInt 0)
+--     b
+--   )
+-- foo <>
+
+-- now thunking by default
+-- if (equal (readInt <>) 42)
+--   then (writeInt 1)
+--   else (writeInt 0)
+
+foo x = x
 foo <>

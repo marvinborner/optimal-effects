@@ -1,7 +1,7 @@
 foo = do (
-  x <- readInt
+  x <- readInt <>
   y <- writeInt 5
-  z <- readInt
+  z <- readInt <>
   foo
 )
 
@@ -11,6 +11,6 @@ do (
 )
 
 -- do (
---   x <- do ( 42 )
+--   x <- do ( return 42 )
 --   writeInt x
 -- )

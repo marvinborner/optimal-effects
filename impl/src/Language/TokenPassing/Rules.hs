@@ -28,95 +28,14 @@ import           GraphRewriting.Rule
 import           GraphRewriting.Strategies.Control
                                                as Control
 import           Language.Generic.Effects
+import           Language.Generic.Rules
 import           Language.Lambda.Transformer.TokenPassing
                                                 ( executeRecursor )
-
-import           Data.Coerce                    ( coerce )
-
-compileShare :: (View [Port] n, View NodeTP n) => Rule n
-compileShare = do
-  Multiplexer { out = o, ins = is } <- node
-  case is of
-    []  -> replace $ byNode Eraser { inp = o }
-    [i] -> rewire [[o, i]]
-    ins ->
-      let (ins1, ins2) = splitAt (length ins `div` 2) ins
-      in  replace $ do
-            (o1, o2) <- (,) <$> byEdge <*> byEdge
-            byNode $ Duplicator { level = 0, inp = o, out1 = o1, out2 = o2 }
-            byNode $ Multiplexer { out = o1, ins = ins1 }
-            byNode $ Multiplexer { out = o2, ins = ins2 }
-
-withoutIdx :: [a] -> Int -> [a]
-withoutIdx xs i = let (ys, zs) = splitAt i xs in ys ++ tail zs
-
-insertIdx :: Int -> a -> [a] -> [a]
-insertIdx i x xs = let (l, r) = splitAt i xs in l ++ [x] ++ r
-
-split :: Int -> Int -> [a] -> [[a]]
-split i n [] = replicate n []
-split i n xs = let (x, xs') = splitAt i xs in x : split i n xs'
-
-transpose' n [] = replicate n []
-transpose' n xs = transpose xs
-
-commute :: (View [Port] n, View NodeTP n) => Rule n
-commute = do
-  n1 :-: n2 <- activePair
-  require (n1 /= n2) -- TODO: replace by linear
-  let ports1 = inspect n1 :: [Port]
-  let ports2 = inspect n2 :: [Port]
-  let (pp1, pp1idx) =
-        head [ (p, i) | (p, i) <- ports1 `zip` [0 ..], p == pp n1 ]
-  let (pp2, pp2idx) =
-        head [ (p, i) | (p, i) <- ports2 `zip` [0 ..], p == pp n2 ]
-  let aux1 = pp1 `delete` inspect n1
-  let aux2 = pp2 `delete` inspect n2
-  let es1  = length aux1
-  let es2  = length aux2
-  replace $ do
-    edges <- replicateM (es1 * es2) byEdge
-    let edges1 = split es1 es2 edges
-    let edges2 = transpose' es1 edges1
-    mconcat
-      [ byNode $ updateLevel n2 $ update (insertIdx pp1idx pp1 auxs) n1
-      | (pp1, auxs) <- zip aux2 edges1
-      ]
-    mconcat
-      [ byNode $ updateLevel n1 $ update (insertIdx pp2idx pp2 auxs) n2
-      | (pp2, auxs) <- zip aux1 edges2
-      ]
- where
-  updateLevel you me = case me of
-    Duplicator{} -> maybeLevelUp
-    _            -> me
-   where
-    maybeLevelUp = case you of
-      Abstractor{} -> me { level = level me + 1 }
-      _            -> me
-
-annihilate :: (View [Port] n, View NodeTP n) => Rule n
-annihilate = do
-  n1 :-: n2 <- activePair
-  require (n1 == n2)
-  let aux1 = pp n1 `delete` inspect n1
-  let aux2 = pp n2 `delete` inspect n2
-  rewire $ [ [a1, a2] | (a1, a2) <- aux1 `zip` aux2 ]
-
-eliminateDuplicator :: (View [Port] n, View NodeTP n) => Rule n
-eliminateDuplicator = do
-  Eraser { inp = iE }                           <- node
-  Duplicator { inp = iD, out1 = o1, out2 = o2 } <- neighbour =<< previous
-  require (iE == o1 || iE == o2)
-  if iE == o1 then rewire [[iD, o2]] else rewire [[iD, o1]]
 
 reflectsToken Abstractor{}        = True
 reflectsToken Actor { arity = a } = a > 0
 reflectsToken Data{}              = True
 reflectsToken _                   = False
-
-isToken Token{} = True
-isToken _       = False
 
 reflectToken :: (View [Port] n, View NodeTP n) => Rule n
 reflectToken = do
@@ -147,9 +66,10 @@ redirectToken = do
 -- TODO: should this basically almost be !reflectsToken ??
 hasActionPotential :: NodeTP -> Bool
 hasActionPotential (Redirector { direction = BottomRight }) = True
-hasActionPotential (Actor{}) = True
-hasActionPotential (Data{} ) = False -- Must be False or possible loops with T-App
-hasActionPotential _         = False
+-- hasActionPotential (Actor{}) = True
+hasActionPotential (Actor { arity = 0 }) = True
+hasActionPotential (Data{}             ) = False -- Must be False or possible loops with T-App
+hasActionPotential _                     = False
 
 backpropagateActor :: (View [Port] n, View NodeTP n) => Rule n
 backpropagateActor = do -- ==> there is an action somewhere inside b
@@ -196,18 +116,6 @@ backpropagateUneffectful = do -- ==> there is no immediate action potential in b
 --     byNode $ red { direction = Top } -- everything else stays!
 --     byNode n
 
-eraser :: (View [Port] n, View NodeTP n) => Rule n
-eraser = do
-  rewrite  <- commute
-  Eraser{} <- liftReader . inspectNode =<< previous
-  return rewrite
-
-duplicate :: (View [Port] n, View NodeTP n) => Rule n
-duplicate = do
-  rewrite      <- commute
-  Duplicator{} <- liftReader . inspectNode =<< previous
-  return rewrite
-
 initializeDataPartial :: (View [Port] n, View NodeTP n) => Rule n
 initializeDataPartial = do
   act@(Actor { name = nm, arity = n, args = as }) :-: Redirector { portA = f, portB = p, portC = a, direction = Top } <-
@@ -232,7 +140,7 @@ applyActor = do
   (Token { out = p, inp = i }) :-: (Actor { name = n, args = a, arity = 0 }) <-
     activePair
   executeActor @NodeTP n a p
-  -- exhaustive compileShare -- TODO!
+  -- exhaustive $ compileShare @NodeTP -- TODO!
 
 applyRecursor :: (View [Port] n, View NodeTP n) => Rule n
 applyRecursor = do

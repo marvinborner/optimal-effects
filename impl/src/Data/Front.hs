@@ -12,10 +12,11 @@ import qualified Data.Text                     as T
 
 type Identifier = Text
 
-data Action = Unit Term | Bind Identifier Term Action -- TODO: | Prim Term
+data Action = Unit Term | Prim Term | Bind Identifier Term Action
 
 instance Show Action where
-  show (Unit t    ) = show t
+  show (Unit t    ) = "(return " <> show t <> ")"
+  show (Prim t    ) = show t
   show (Bind n t a) = show n <> " <- " <> show t <> "; " <> show a
 
 -- we parse singleton expression as `Def _ [] e next`!

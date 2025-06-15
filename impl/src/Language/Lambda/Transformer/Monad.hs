@@ -65,7 +65,7 @@ compile node edge conn = para $ \case
     ctx1@(Context { port = pf }) <- f
     ctx2@(Context { port = pa }) <- a
     o                            <- edge
-    node Applicator { inp = pf, func = o, arg = pa }
+    node Applicator { inp = o, func = pf, arg = pa }
     return $ (ctx1 <> ctx2) { port = o }
   L.Idx i -> do
     o <- edge
@@ -82,12 +82,24 @@ compile node edge conn = para $ \case
     return $ ctx { bindings = bs', port = p }
   L.Act n a -> do
     o <- edge
-    node $ Actor { inp = o, name = n, arity = a, args = [] }
-    return $ Context { port = o, bindings = [] }
+    node Actor { inp = o, name = n, arity = a, args = [] }
+    return Context { port = o, bindings = [] }
   L.Dat d -> do
     o <- edge
     node $ Data { inp = o, dat = d }
     return $ Context { port = o, bindings = [] }
+  L.Bnd (_, t) (_, n) -> do
+    ctxT@(Context { bindings = bsT, port = pT }) <- t
+    ctxN@(Context { bindings = bsN, port = pN }) <- n
+    -- shifts are handled by abs (always immediate in n)
+    o <- edge
+    node BindN { inp = o, arg = pT, var = pN, exec = False }
+    return $ Context { port = o, bindings = bsT <> bsN }
+  L.Eta (_, t) -> do
+    o <- edge
+    ctx@(Context { bindings = bs, port = cont }) <- t
+    node UnitN { inp = o, out = cont }
+    return $ ctx { port = o, bindings = bs }
   _ -> error ""
 
 -- | create multiplexer of all =0 bindings

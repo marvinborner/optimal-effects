@@ -3,7 +3,7 @@
 -- Copyright (c) 2010, Jan Rochel
 -- Copyright (c) 2024, Marvin Borner
 
-{-# LANGUAGE TypeApplications, FlexibleContexts, FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications, AllowAmbiguousTypes, FlexibleContexts, FlexibleInstances #-}
 
 module Language.Monad.Reducer
   ( bench
@@ -29,6 +29,8 @@ import           GraphRewriting.Rule
 import           GraphRewriting.Strategies.Control
                                                as Control
 import           GraphRewriting.Strategies.LeftmostOutermost
+import           Language.Generic.Node
+import           Language.Generic.Rules
 import           Language.Monad.GL
 import           Language.Monad.Rules
 
@@ -66,9 +68,9 @@ layoutStep n = do
 visualize :: Graph NodeMS -> IO ()
 visualize term = do
   (_, _) <- UI.initialise
-  let hypergraph  = execGraph (apply $ exhaustive compileShare) term
+  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeMS) term
   let layoutGraph = Layout.wrapGraph hypergraph
-  UI.run 50 id layoutStep layoutGraph ruleTree
+  UI.run 50 id layoutStep layoutGraph (ruleTree @NodeMS)
 
 -- from LambdaScope/GraphRewriting
 incIndex :: Int -> [Int] -> [Int]
@@ -81,32 +83,37 @@ incIndex n []       = 0 : incIndex (n - 1) []
 bench :: Graph NodeMS -> IO ()
 bench term = do
   (_, _) <- UI.initialise
-  let hypergraph = execGraph (apply $ exhaustive compileShare) term
-  let indices =
-        evalGraph (benchmark $ toList ruleTree) (Control.wrapGraph hypergraph)
+  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeMS) term
+  let indices = evalGraph (benchmark $ toList (ruleTree @NodeMS))
+                          (Control.wrapGraph hypergraph)
   let indexTable = foldl (flip incIndex) [] indices
   let (_, numTree) = mapAccumL (\(i : is) _ -> (is, i))
                                (indexTable ++ repeat 0)
-                               (ruleTree @(Control.Wrapper NodeMS))
+                               (ruleTree @NodeMS @(Control.Wrapper NodeMS))
   putStrLn $ showLabelledTree 2 0 (+) numTree
 
-ruleTree :: (View NodeMS n, View [Port] n) => LabelledTree (Rule n)
+ruleTree
+  :: forall m n
+   . (GenericNode m, View NodeMS n, View [Port] n, View m n)
+  => LabelledTree (Rule n)
 ruleTree = Branch
   "All"
-  [ Leaf "Duplicate"  duplicate
-  , Leaf "Eliminate"  eliminateDuplicator
-  , Leaf "Annihilate" annihilate
-  , Leaf "Erase"      eraser
-  -- , Leaf "Multiplexer" compileShare
-  -- , Branch
-  --   "Effective"
-  --   [ Leaf "Initialize Bind Execution"      initializeBindExec
-  --   , Leaf "Initialize Unit Execution"      initializeUnitExec
-  --   , Leaf "Apply Bind Execution"           applyBindExec
-  --   , Leaf "Apply Unit Execution"           applyUnitExec
-  --   , Leaf "Initialize Partial Application" initializeDataPartial
-  --   , Leaf "Apply Partially"                applyDataPartial
-  --   , Leaf "Bind Exec Bind"                 bindExecBind
-  --   , Leaf "Bind Exec Unit"                 bindExecUnit
-  --   ]
+  [ Leaf "Duplicate" $ duplicate @m
+  , Leaf "Eliminate" $ eliminateDuplicator @m
+  , Leaf "Annihilate" $ annihilate @m
+  , Leaf "Erase" $ eraser @m
+  , Leaf "Multiplexer" $ compileShare @m
+  , Branch
+    "Token"
+    [ Leaf "Rotate Bind" rotateBind
+    , Leaf "Pop Unit"    popUnit
+    , Leaf "Pop Bind"    popBind
+    ]
+  , Branch
+    "Effective"
+    [ Leaf "Apply Actor"                    applyActor
+    , Leaf "Apply Recursor"                 applyRecursor
+    , Leaf "Initialize Partial Application" initializeDataPartial
+    , Leaf "Apply Partially"                applyDataPartial
+    ]
   ]

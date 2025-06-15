@@ -17,14 +17,18 @@ import qualified Language.Front.Parser         as Front
 import qualified Language.Front.Transformer.Lambda
                                                as Front
                                                 ( transformLambda )
-import qualified Language.Front.Transformer.TokenPassing
-                                               as Front
-                                                ( transformTokenPassing )
+import qualified Language.Lambda.Transformer.Monad
+                                               as Lambda
+                                                ( transformMonad )
 import qualified Language.Lambda.Transformer.TokenPassing
                                                as Lambda
                                                 ( transformTokenPassing )
+import qualified Language.Monad.Reducer        as Monad
+                                                ( bench
+                                                , visualize
+                                                )
 import qualified Language.TokenPassing.Reducer as TokenPassing
-                                                ( nf
+                                                ( bench
                                                 , visualize
                                                 )
 import           Options.Applicative            ( (<**>)
@@ -49,21 +53,16 @@ args = pure $ Args ArgEval
 pipeline input = do
   front  <- Front.parseProgram input
   lambda <- Front.transformLambda front
-  -- trace (show front <> "\n\n\n" <> show (Lambda.unwrap lambda))
-  --       (Lambda.transformTokenPassing lambda)
-  Lambda.transformTokenPassing lambda
-  -- trace (show front) Front.transformTokenPassing front
+  trace (show front <> "\n\n\n" <> show (Lambda.unwrap lambda))
+        (Lambda.transformMonad lambda)
 
 actions :: Args -> IO ()
 actions Args { _argMode = ArgEval } = do
   program <- getContents
   case pipeline $ T.pack program of
-    Left  err  -> putStrLn err
-    Right core -> TokenPassing.visualize core
-    -- Right out ->
-    --   let term = show out
-    --       -- normal = show $ nf out
-    --   in  putStrLn $ term -- <> "\n" <> normal
+    Left err -> putStrLn err
+    Right core -> --TokenPassing.bench core
+      Monad.visualize core
 
 main :: IO ()
 main = execParser opts >>= actions

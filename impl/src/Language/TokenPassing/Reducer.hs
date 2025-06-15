@@ -3,7 +3,7 @@
 -- Copyright (c) 2010, Jan Rochel
 -- Copyright (c) 2024, Marvin Borner
 
-{-# LANGUAGE TypeApplications, FlexibleContexts, FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications, AllowAmbiguousTypes, FlexibleContexts, FlexibleInstances #-}
 
 module Language.TokenPassing.Reducer
   ( visualize
@@ -29,6 +29,8 @@ import           GraphRewriting.Rule
 import           GraphRewriting.Strategies.Control
                                                as Control
 import           GraphRewriting.Strategies.LeftmostOutermost
+import           Language.Generic.Node
+import           Language.Generic.Rules
 import           Language.TokenPassing.GL
 import           Language.TokenPassing.Rules
 
@@ -66,9 +68,9 @@ layoutStep n = do
 visualize :: Graph NodeTP -> IO ()
 visualize term = do
   (_, _) <- UI.initialise
-  let hypergraph  = execGraph (apply $ exhaustive compileShare) term
+  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeTP) term
   let layoutGraph = Layout.wrapGraph hypergraph
-  UI.run 50 id layoutStep layoutGraph ruleTree
+  UI.run 50 id layoutStep layoutGraph (ruleTree @NodeTP)
 
 -- from LambdaScope/GraphRewriting
 incIndex :: Int -> [Int] -> [Int]
@@ -81,23 +83,26 @@ incIndex n []       = 0 : incIndex (n - 1) []
 bench :: Graph NodeTP -> IO ()
 bench term = do
   (_, _) <- UI.initialise
-  let hypergraph = execGraph (apply $ exhaustive compileShare) term
-  let indices =
-        evalGraph (benchmark $ toList ruleTree) (Control.wrapGraph hypergraph)
+  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeTP) term
+  let indices = evalGraph (benchmark $ toList $ ruleTree @NodeTP)
+                          (Control.wrapGraph hypergraph)
   let indexTable = foldl (flip incIndex) [] indices
   let (_, numTree) = mapAccumL (\(i : is) _ -> (is, i))
                                (indexTable ++ repeat 0)
-                               (ruleTree @(Control.Wrapper NodeTP))
+                               (ruleTree @NodeTP @(Control.Wrapper NodeTP))
   putStrLn $ showLabelledTree 2 0 (+) numTree
 
-ruleTree :: (View NodeTP n, View [Port] n) => LabelledTree (Rule n)
+ruleTree
+  :: forall m n
+   . (GenericNode m, View NodeTP n, View [Port] n, View m n)
+  => LabelledTree (Rule n)
 ruleTree = Branch
   "All"
-  [ Leaf "Duplicate"   duplicate
-  , Leaf "Eliminate"   eliminateDuplicator
-  , Leaf "Annihilate"  annihilate
-  , Leaf "Erase"       eraser
-  , Leaf "Multiplexer" compileShare
+  [ Leaf "Duplicate" $ duplicate @m
+  , Leaf "Eliminate" $ eliminateDuplicator @m
+  , Leaf "Annihilate" $ annihilate @m
+  , Leaf "Erase" $ eraser @m
+  , Leaf "Multiplexer" $ compileShare @m
   , Branch
     "Token"
     [ Leaf "Redirect Token"            redirectToken

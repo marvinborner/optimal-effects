@@ -38,20 +38,6 @@ data NodeTP
         -- custom
         | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
 
-instance GenericNode NodeTP where
-  gInitiator  = Initiator
-  gApplicator = \inp func arg ->
-    Redirector { portA = inp, portB = func, portC = arg, direction = Top }
-  gAbstractor  = Abstractor
-  gEraser      = Eraser
-  gDuplicator  = Duplicator
-  gMultiplexer = Multiplexer
-  gToken       = Token
-  gActor       = Actor
-  gActorC      = ActorC
-  gRecursor    = Recursor
-  gData        = Data
-
 instance Eq NodeTP where
   Eraser{}                  == Eraser{}                       = True
   Abstractor{}              == Redirector { direction = Top } = True -- both CON in SIC!
@@ -106,3 +92,43 @@ pp node = case node of
   Redirector { portC = c, direction = BottomLeft } -> c
   Token { inp = i }                            -> i
   Data { inp = i }                             -> i
+
+instance GenericNode NodeTP where
+  gInitiator  = Initiator
+  gApplicator = \inp func arg ->
+    Redirector { portA = inp, portB = func, portC = arg, direction = Top }
+  gAbstractor  = Abstractor
+  gEraser      = Eraser
+  gDuplicator  = Duplicator
+  gMultiplexer = Multiplexer
+  gToken       = Token
+  gActor       = Actor
+  gActorC      = ActorC
+  gRecursor    = Recursor
+  gData        = Data
+
+  gpp          = pp
+
+  -- Racket-style :)
+  isInitiator Initiator{} = True
+  isInitiator _           = False
+  isApplicator Redirector { direction = Top } = True
+  isApplicator _                              = False
+  isAbstractor Abstractor{} = True
+  isAbstractor _            = False
+  isEraser Eraser{} = True
+  isEraser _        = False
+  isDuplicator Duplicator{} = True
+  isDuplicator _            = False
+  isMultiplexer Multiplexer{} = True
+  isMultiplexer _             = False
+  isToken Token{} = True
+  isToken _       = False
+  isActor Actor{} = True
+  isActor _       = False
+  isActorC ActorC{} = True
+  isActorC _        = False
+  isRecursor Recursor{} = True
+  isRecursor _          = False
+  isData Data{} = True
+  isData _      = False

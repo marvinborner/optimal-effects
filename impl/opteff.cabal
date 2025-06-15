@@ -24,7 +24,7 @@ source-repository head
 library
   exposed-modules:
       Data.LambdaScope
-      Data.FreeMonad
+      Data.Monad
       Data.TokenPassing
       Data.Front
       Data.Lambda
@@ -54,23 +54,24 @@ library
       GraphRewriting.Pattern
       GraphRewriting.Pattern.InteractionNet
       GraphRewriting.Rule
+      GraphRewriting.Strategies.Control
+      GraphRewriting.Strategies.LeftmostOutermost
       Language.LambdaScope.GL
       Language.LambdaScope.Reducer
       Language.LambdaScope.Rules
       Language.TokenPassing.GL
       Language.TokenPassing.Reducer
       Language.TokenPassing.Rules
-      Language.TokenPassing.Effects
-      Language.FreeMonad.GL
-      Language.FreeMonad.Reducer
-      Language.FreeMonad.Rules
-      Language.FreeMonad.Effects
+      Language.Monad.GL
+      Language.Monad.Reducer
+      Language.Monad.Rules
       Language.Front.Parser
       Language.Front.Transformer.Lambda
-      Language.Front.Transformer.LambdaScope
-      Language.Front.Transformer.TokenPassing
-      Language.Front.Transformer.FreeMonad
       Language.Lambda.Transformer.TokenPassing
+      Language.Lambda.Transformer.Monad
+      Language.Generic.Effects
+      Language.Generic.Node
+      Language.Generic.Rules
   other-modules:
       Paths_opteff
       GraphRewriting.Graph.Internal
@@ -81,6 +82,7 @@ library
   default-extensions:
       LambdaCase
       OverloadedStrings
+      QuantifiedConstraints
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       AC-Vector >=2.4.0

@@ -9,6 +9,8 @@ module Data.Lambda
   , idx
   , act
   , dat
+  , bnd
+  , eta
   , Term
   , TermF(..)
   , para
@@ -28,6 +30,8 @@ data TermF t = Lam t
             | Cot
             | Act T.Text Int
             | Dat EffectData
+            | Bnd t t
+            | Eta t
             deriving Functor
 
 instance Show t => Show (TermF t) where
@@ -40,6 +44,8 @@ instance Show t => Show (TermF t) where
   showsPrec _ (Rec t _) = showString "([" <> shows t <> showString "] BOX)"
   showsPrec _ (Act n _) = showString $ T.unpack n
   showsPrec _ (Dat d  ) = shows d
+  showsPrec _ (Bnd t n) = shows t . showString " >>= " . shows n
+  showsPrec _ (Eta t  ) = showString "(unit " . shows t . showString ")"
 
 deriveShow1 ''TermF
 
@@ -71,6 +77,12 @@ act name arity = Fix $ Act name arity
 
 dat :: EffectData -> Term
 dat d = Fix $ Dat d
+
+bnd :: Term -> Term -> Term
+bnd term next = Fix $ Bnd term next
+
+eta :: Term -> Term
+eta t = Fix $ Eta t
 
 unwrap :: Term -> TermF Term
 unwrap (Fix t) = t
