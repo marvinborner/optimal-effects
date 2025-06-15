@@ -10,8 +10,7 @@ module Data.TokenPassing
   , pp
   ) where
 
-import           Data.Effects                   ( EffectData
-                                                )
+import           Data.Effects                   ( EffectData )
 import qualified Data.Lambda                   as Lambda
                                                 ( Term )
 import qualified Data.Text                     as T
@@ -20,6 +19,7 @@ import           GraphRewriting.Graph.Types
 import           GraphRewriting.Layout.Wrapper as Layout
 import           GraphRewriting.Pattern.InteractionNet
 import           GraphRewriting.Rule
+import           Language.Generic.Node
 
 data AppDir = Top | BottomLeft | BottomRight
 
@@ -30,12 +30,27 @@ data NodeTP
         | Eraser      {inp :: Port}
         | Duplicator  {level :: Int, inp, out1, out2 :: Port}
         | Multiplexer {out :: Port, ins :: [Port]} -- only intermediate compilation result
-        | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
         | Token       {inp, out :: Port}
         | Actor       {inp :: Port, name :: T.Text, arity :: Int, args :: [EffectData]}
         | ActorC      {inp, cur :: Port, name :: T.Text, arity :: Int, args :: [EffectData]}
         | Recursor    {inp :: Port, boxed :: Lambda.Term }
         | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
+        -- custom
+        | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
+
+instance GenericNode NodeTP where
+  gInitiator  = Initiator
+  gApplicator = \inp func arg ->
+    Redirector { portA = inp, portB = func, portC = arg, direction = Top }
+  gAbstractor  = Abstractor
+  gEraser      = Eraser
+  gDuplicator  = Duplicator
+  gMultiplexer = Multiplexer
+  gToken       = Token
+  gActor       = Actor
+  gActorC      = ActorC
+  gRecursor    = Recursor
+  gData        = Data
 
 instance Eq NodeTP where
   Eraser{}                  == Eraser{}                       = True

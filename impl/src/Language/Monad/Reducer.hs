@@ -3,14 +3,16 @@
 -- Copyright (c) 2010, Jan Rochel
 -- Copyright (c) 2024, Marvin Borner
 
-{-# LANGUAGE FlexibleContexts, FlexibleInstances #-}
+{-# LANGUAGE TypeApplications, FlexibleContexts, FlexibleInstances #-}
 
-module Language.FreeMonad.Reducer
-  ( nf
+module Language.Monad.Reducer
+  ( bench
   , visualize
   ) where
 
-import           Data.FreeMonad
+import           Data.Foldable                  ( toList )
+import           Data.Monad
+import           Data.Traversable               ( mapAccumL )
 import           Data.Vector.V2                 ( Vector2(..) )
 import           GraphRewriting.GL.Render
 import           GraphRewriting.GL.UI          as UI
@@ -27,8 +29,8 @@ import           GraphRewriting.Rule
 import           GraphRewriting.Strategies.Control
                                                as Control
 import           GraphRewriting.Strategies.LeftmostOutermost
-import           Language.FreeMonad.GL
-import           Language.FreeMonad.Rules
+import           Language.Monad.GL
+import           Language.Monad.Rules
 
 -- TODO
 import           GraphRewriting.Pattern.InteractionNet
@@ -59,21 +61,36 @@ layoutStep n = do
     . position
   Unsafe.adjustNode n $ rot (* 0.9)
 
--- | Reduce graph to normal form
-nf :: Graph NodeLS -> Graph NodeLS
-nf term = term
-
 -- | Visualize reduction to normal form
 -- TODO: only app should use IO
-visualize :: Graph NodeLS -> IO ()
+visualize :: Graph NodeMS -> IO ()
 visualize term = do
   (_, _) <- UI.initialise
   let hypergraph  = execGraph (apply $ exhaustive compileShare) term
   let layoutGraph = Layout.wrapGraph hypergraph
   UI.run 50 id layoutStep layoutGraph ruleTree
 
-ruleTree
-  :: (EffectApplicable n, View NodeLS n, View [Port] n) => LabelledTree (Rule n)
+-- from LambdaScope/GraphRewriting
+incIndex :: Int -> [Int] -> [Int]
+incIndex 0 (i : is) = i + 1 : is
+incIndex 0 []       = [1]
+incIndex n (i : is) = i : incIndex (n - 1) is
+incIndex n []       = 0 : incIndex (n - 1) []
+
+-- from LambdaScope/GraphRewriting
+bench :: Graph NodeMS -> IO ()
+bench term = do
+  (_, _) <- UI.initialise
+  let hypergraph = execGraph (apply $ exhaustive compileShare) term
+  let indices =
+        evalGraph (benchmark $ toList ruleTree) (Control.wrapGraph hypergraph)
+  let indexTable = foldl (flip incIndex) [] indices
+  let (_, numTree) = mapAccumL (\(i : is) _ -> (is, i))
+                               (indexTable ++ repeat 0)
+                               (ruleTree @(Control.Wrapper NodeMS))
+  putStrLn $ showLabelledTree 2 0 (+) numTree
+
+ruleTree :: (View NodeMS n, View [Port] n) => LabelledTree (Rule n)
 ruleTree = Branch
   "All"
   [ Leaf "Duplicate"  duplicate
@@ -81,15 +98,15 @@ ruleTree = Branch
   , Leaf "Annihilate" annihilate
   , Leaf "Erase"      eraser
   -- , Leaf "Multiplexer" compileShare
-  , Branch
-    "Effective"
-    [ Leaf "Initialize Bind Execution"      initializeBindExec
-    , Leaf "Initialize Unit Execution"      initializeUnitExec
-    , Leaf "Apply Bind Execution"           applyBindExec
-    , Leaf "Apply Unit Execution"           applyUnitExec
-    , Leaf "Initialize Partial Application" initializeDataPartial
-    , Leaf "Apply Partially"                applyDataPartial
-    , Leaf "Bind Exec Bind"                 bindExecBind
-    , Leaf "Bind Exec Unit"                 bindExecUnit
-    ]
+  -- , Branch
+  --   "Effective"
+  --   [ Leaf "Initialize Bind Execution"      initializeBindExec
+  --   , Leaf "Initialize Unit Execution"      initializeUnitExec
+  --   , Leaf "Apply Bind Execution"           applyBindExec
+  --   , Leaf "Apply Unit Execution"           applyUnitExec
+  --   , Leaf "Initialize Partial Application" initializeDataPartial
+  --   , Leaf "Apply Partially"                applyDataPartial
+  --   , Leaf "Bind Exec Bind"                 bindExecBind
+  --   , Leaf "Bind Exec Unit"                 bindExecUnit
+  --   ]
   ]

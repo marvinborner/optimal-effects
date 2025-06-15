@@ -231,7 +231,7 @@ applyActor :: (View [Port] n, View NodeTP n) => Rule n
 applyActor = do
   (Token { out = p, inp = i }) :-: (Actor { name = n, args = a, arity = 0 }) <-
     activePair
-  executeActor n a p
+  executeActor @NodeTP n a p
   -- exhaustive compileShare -- TODO!
 
 applyRecursor :: (View [Port] n, View NodeTP n) => Rule n

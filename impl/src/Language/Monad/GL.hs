@@ -4,17 +4,18 @@
 -- Copyright (c) 2024, Marvin Borner
 
 {-# LANGUAGE FlexibleInstances #-}
-module Language.FreeMonad.GL
+module Language.Monad.GL
   () where
 
-import           Data.FreeMonad
+import           Data.Effects                   ( EffectData(..) )
+import           Data.Monad
 import qualified Data.Text                     as T
 import           GraphRewriting.GL.Render
 import           GraphRewriting.Layout.PortSpec
 import           GraphRewriting.Strategies.Control
 import qualified Graphics.UI.GLUT              as GL
 
-instance PortSpec NodeLS where
+instance PortSpec NodeMS where
   portSpec node =
     let sd = sameDir
     in
@@ -28,7 +29,10 @@ instance PortSpec NodeLS where
           , (Vector2 (-0.6) (-0.5), s)
           , (Vector2 0.6 (-0.5)   , s)
           ]
-        Actor{}       -> [sd n, sd s]
+        Actor{}       -> [sd n]
+        ActorC{}      -> [sd n, sd s]
+        Recursor{}    -> [sd n]
+        Token{}       -> [sd n, sd s]
         Data{}        -> [sd n]
         Multiplexer{} -> [sd n, sd s]
         BindN{}       -> [sd n, sd s, sd e, sd e] -- TODO
@@ -45,7 +49,7 @@ instance PortSpec NodeLS where
       Vector2 (x1 * x + x2 * y) (y1 * x + y2 * y)
     sws = Vector2 (-0.7) (-0.7)
 
-instance Render NodeLS where
+instance Render NodeMS where
   render = renderNode
 
 instance Render n => Render (Wrapper n) where
@@ -66,13 +70,18 @@ renderNode node = drawPorts node >> case node of
       vertex2 (-1, -0.5)
       vertex2 (1, -0.5)
     renderString $ show $ level node
-  Actor{}          -> drawNode $ T.unpack $ name node
-  Data { dat = d } -> drawNode $ "D=" <> d
-  Multiplexer{}    -> drawNode "M"
-  BindN{}          -> drawNode ">>="
-  UnitN{}          -> drawNode "<>"
+  Actor { name = n, arity = a }  -> drawNode $ T.unpack n <> show a
+  ActorC { name = n, arity = a } -> drawNode $ T.unpack n <> show a <> "c"
+  Recursor{}                     -> drawNode "REC"
+  Token{}                        -> drawNode "T"
+  Data { dat = UnitData }        -> drawNode "()"
+  Data { dat = StringData s }    -> drawNode $ "D=" <> s
+  Data { dat = NumberData n }    -> drawNode $ "D=" <> show n
+  Multiplexer{}                  -> drawNode "M"
+  BindN{}                        -> drawNode ">>="
+  UnitN{}                        -> drawNode "<>"
 
-drawPorts :: NodeLS -> IO ()
+drawPorts :: NodeMS -> IO ()
 drawPorts n = sequence_
   [ drawPort (factor p) pos | (pos, p) <- positions `zip` ports ] where
   positions = relPortPos n
