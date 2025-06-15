@@ -133,6 +133,8 @@ actionArity "writeInt" = 1
 actionArity "equal"    = 2
 actionArity "add"      = 2
 actionArity "sub"      = 2
+actionArity "mul"      = 2
+actionArity "div"      = 2
 actionArity _          = -1
 
 -- | side effect (TODO: temporary!)
@@ -144,6 +146,8 @@ action =
         <|> symbol "equal"
         <|> symbol "add"
         <|> symbol "sub"
+        <|> symbol "mul"
+        <|> symbol "div"
         )
 
 singleton :: Parser Term

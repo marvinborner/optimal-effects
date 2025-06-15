@@ -1,5 +1,5 @@
 -- Copyright (c) 2025, Marvin Borner
-{-# LANGUAGE TypeApplications, FlexibleContexts, TypeOperators #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Language.Lambda.Transformer.TokenPassing
   ( transformTokenPassing

@@ -7,7 +7,7 @@
 
 module Language.TokenPassing.Reducer
   ( visualize
-  -- , bench
+  , bench
   ) where
 
 import           Data.Foldable                  ( toList )
@@ -84,7 +84,6 @@ bench term = do
   let hypergraph = execGraph (apply $ exhaustive compileShare) term
   let indices =
         evalGraph (benchmark $ toList ruleTree) (Control.wrapGraph hypergraph)
-  print indices
   let indexTable = foldl (flip incIndex) [] indices
   let (_, numTree) = mapAccumL (\(i : is) _ -> (is, i))
                                (indexTable ++ repeat 0)
@@ -100,17 +99,20 @@ ruleTree = Branch
   , Leaf "Erase"       eraser
   , Leaf "Multiplexer" compileShare
   , Branch
+    "Token"
+    [ Leaf "Redirect Token"            redirectToken
+    , Leaf "Reflect Token"             reflectToken
+    , Leaf "Backpropagate Actor"       backpropagateActor
+    , Leaf "Backpropagate Actor 2"     backpropagateActor2
+    , Leaf "Backpropagate Uneffectful" backpropagateUneffectful
+    -- , Leaf "Backpropagate Uneffectful2"     backpropagateUneffectful2
+    ]
+  , Branch
     "Effective"
     [ Leaf "Apply Actor"                    applyActor
     , Leaf "Apply Recursor"                 applyRecursor
-    , Leaf "Redirect Token"                 redirectToken
-    , Leaf "Reflect Token"                  reflectToken
     -- , Leaf "Passthrough Right"              passthroughRight
     , Leaf "Initialize Partial Application" initializeDataPartial
     , Leaf "Apply Partially"                applyDataPartial
-    , Leaf "Backpropagate Actor"            backpropagateActor
-    , Leaf "Backpropagate Actor 2"          backpropagateActor2
-    , Leaf "Backpropagate Uneffectful"      backpropagateUneffectful
-    -- , Leaf "Backpropagate Uneffectful2"     backpropagateUneffectful2
     ]
   ]

@@ -66,4 +66,14 @@ executeActor "sub" [NumberData b, NumberData a] p = replace $ do
   trace ("sub: " <> show a <> " " <> show b)
     $ byNode Data { inp = tok, dat = NumberData (a - b) }
   byNode Token { inp = p, out = tok }
+executeActor "mul" [NumberData b, NumberData a] p = replace $ do
+  tok <- byEdge -- send token back!
+  trace ("mul: " <> show a <> " " <> show b)
+    $ byNode Data { inp = tok, dat = NumberData (a * b) }
+  byNode Token { inp = p, out = tok }
+executeActor "div" [NumberData b, NumberData a] p = replace $ do
+  tok <- byEdge -- send token back!
+  trace ("div: " <> show a <> " " <> show b)
+    $ byNode Data { inp = tok, dat = NumberData (a `div` b) }
+  byNode Token { inp = p, out = tok }
 executeActor _ _ _ = error "invalid action"
