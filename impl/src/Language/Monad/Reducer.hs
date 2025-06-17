@@ -110,7 +110,7 @@ ruleTree = Branch
     , Leaf "Pop Bind"    popBind
     ]
   , Branch
-    "Effective"
+    "Effectful"
     [ Leaf "Apply Actor"                    applyActor
     , Leaf "Apply Recursor"                 applyRecursor
     , Leaf "Initialize Partial Application" initializeDataPartial

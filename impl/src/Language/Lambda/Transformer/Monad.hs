@@ -7,6 +7,7 @@ module Language.Lambda.Transformer.Monad
   ) where
 
 import           Control.Monad.State
+import           Data.Fix
 import           Data.Lambda                    ( para )
 import qualified Data.Lambda                   as L
 import           Data.Monad
@@ -45,7 +46,6 @@ transformMonad term = do
   return graph
 
 -- we use a para instead cata to expand the original term within rec
--- TODO: translate token by app match
 compile
   :: Monad m
   => (NodeMS -> m a1)
@@ -61,6 +61,15 @@ compile node edge conn = para $ \case
     node Abstractor { inp = o, body = p, var = x }
     let bs' = (\(i, e) -> (i - 1, e)) <$> bs
     return $ ctx { bindings = bs', port = o }
+  L.App (_, t) (Fix L.Tok, _) -> do -- (f a !) async actions
+    ctx@(Context { port = p }) <- t
+    o1                         <- edge
+    o2                         <- edge
+    -- we send 2 tokens that erase eachother after the first is reflected
+    -- this prevents rogue threads spreading from async actions
+    node Token { inp = p, out = o1 }
+    node Token { inp = o1, out = o2 }
+    return $ ctx { port = o2 }
   L.App (_, f) (_, a) -> do
     ctx1@(Context { port = pf }) <- f
     ctx2@(Context { port = pa }) <- a
@@ -100,7 +109,7 @@ compile node edge conn = para $ \case
     ctx@(Context { bindings = bs, port = cont }) <- t
     node UnitN { inp = o, out = cont }
     return $ ctx { port = o, bindings = bs }
-  _ -> error ""
+  _ -> error "invalid term"
 
 -- | create multiplexer of all =0 bindings
 -- TODO: we could additionally return a new context with the popped bindings

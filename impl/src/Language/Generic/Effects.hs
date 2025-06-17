@@ -28,7 +28,6 @@ churchTrue p = replace $ do
   byNode $ gAbstractor @m con var era
   byNode $ gToken @m p tok
 
--- churchFalse :: Edge -> Replace (Layout.Wrapper (NodeTP n)) ()
 churchFalse
   :: forall m n . (GenericNode m, View [Port] n, View m n) => Edge -> Rule n
 churchFalse p = replace $ do
@@ -65,10 +64,9 @@ executeActor "writeInt" [NumberData n] p = replace $ do
   tok <- byEdge -- send token back!
   trace ("writeInt: " <> show n) $ byNode $ gData @m tok UnitData
   byNode $ gToken @m p tok
-executeActor "equal" [NumberData b, NumberData a] p | a == b =
-  trace ("equal: " <> show a <> " " <> show b) $ churchTrue @m p
-executeActor "equal" [NumberData b, NumberData a] p | a /= b =
-  trace ("not equal: " <> show a <> " " <> show b) $ churchFalse @m p
+executeActor "equal" [NumberData b, NumberData a] p
+  | a == b = trace ("equal: " <> show a <> " " <> show b) $ churchTrue @m p
+  | a /= b = trace ("not equal: " <> show a <> " " <> show b) $ churchFalse @m p
 executeActor "add" [NumberData b, NumberData a] p = replace $ do
   tok <- byEdge -- send token back!
   trace ("add: " <> show a <> " " <> show b) $ byNode $ gData @m

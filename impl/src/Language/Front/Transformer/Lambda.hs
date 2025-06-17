@@ -40,6 +40,7 @@ isRecursive n = \case
   UnitV       -> False
   Num _       -> False
   Act _ _     -> False
+  Token       -> False
   Do (Prim t) -> isRecursive n t
   Do (Unit t) -> isRecursive n t
   Do (Bind n' t a) | n == n'   -> isRecursive n t
@@ -86,7 +87,7 @@ transform = \case
     (Context { stk = s }) <- get
     let maybeIdx = elemIndex n s
     case maybeIdx of
-      Nothing  -> throwError $ "Identifier not found: " <> T.unpack n
+      Nothing  -> throwError $ "Identifier not found: " <> T.unpack n <> show s
       Just idx -> return $ L.idx idx
   Abs n t -> do
     ctx@(Context { stk = s }) <- get
@@ -101,12 +102,15 @@ transform = \case
   Num n           -> return $ L.dat $ NumberData n
   UnitV           -> return $ L.dat UnitData
   Act a n         -> return $ L.act a n
+  Token           -> return L.tok
 
+  -- TODO: rec closure
   Do (Bind v t n) -> do
     ctx@(Context { stk = s }) <- get
     t'                        <- transform t
     put $ ctx { stk = v : s }
     n' <- transform (Do n)
+    put $ ctx { stk = s }
     return $ L.bnd t' (L.lam n')
   Do (Unit t) -> do
     t' <- transform t

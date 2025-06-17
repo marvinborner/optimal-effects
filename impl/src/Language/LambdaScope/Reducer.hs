@@ -85,7 +85,7 @@ ruleTree = Branch
     , Leaf "Commute Delimiter" commuteDelimiter
     , Leaf "Erase"             eraser
     , Branch
-      "Effective"
+      "Effectful"
       [ Leaf "Constant"     applyConstant
       , Leaf "Apply Actor"  applyActor
       , Leaf "Exec Actor"   execActor

@@ -31,8 +31,7 @@ data Term = Def Identifier [Identifier] Term Term
           | Fork Term Term
           | Act Identifier Int
           | Do Action
-          | Pure Term
-          | Strict Term
+          | Token
 
 instance Show Term where
   show (Def n params body next) =
@@ -46,12 +45,11 @@ instance Show Term where
   show (Rec n rec body) = "REC(" <> T.unpack n <> ")"
   show (If clause true false) =
     "if (" <> show clause <> ") then " <> show true <> " else " <> show false
-  show (Var n    ) = T.unpack n
-  show (App a b  ) = "(" <> show a <> " " <> show b <> ")"
-  show (Abs n b  ) = "λ" <> T.unpack n <> "." <> show b
-  show (Num n    ) = show n
-  show (UnitV    ) = "<>"
-  show (Act n _  ) = T.unpack n
-  show (Do     as) = "do (" <> show as <> ")"
-  show (Pure   t ) = "pure (" <> show t <> ")"
-  show (Strict t ) = "strict (" <> show t <> ")"
+  show (Var n  ) = T.unpack n
+  show (App a b) = "(" <> show a <> " " <> show b <> ")"
+  show (Abs n b) = "λ" <> T.unpack n <> "." <> show b
+  show (Num n  ) = show n
+  show (UnitV  ) = "<>"
+  show (Act n _) = T.unpack n
+  show (Do as  ) = "do (" <> show as <> ")"
+  show Token     = "!"

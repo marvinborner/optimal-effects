@@ -113,7 +113,7 @@ ruleTree = Branch
     -- , Leaf "Backpropagate Uneffectful2"     backpropagateUneffectful2
     ]
   , Branch
-    "Effective"
+    "Effectful"
     [ Leaf "Apply Actor"                    applyActor
     , Leaf "Apply Recursor"                 applyRecursor
     -- , Leaf "Passthrough Right"              passthroughRight

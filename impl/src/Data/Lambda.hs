@@ -11,6 +11,7 @@ module Data.Lambda
   , dat
   , bnd
   , eta
+  , tok
   , Term
   , TermF(..)
   , para
@@ -83,6 +84,9 @@ bnd term next = Fix $ Bnd term next
 
 eta :: Term -> Term
 eta t = Fix $ Eta t
+
+tok :: Term
+tok = Fix Tok
 
 unwrap :: Term -> TermF Term
 unwrap (Fix t) = t

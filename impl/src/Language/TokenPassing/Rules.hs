@@ -32,6 +32,7 @@ import           Language.Generic.Rules
 import           Language.Lambda.Transformer.TokenPassing
                                                 ( executeRecursor )
 
+reflectsToken :: NodeTP -> Bool
 reflectsToken Abstractor{}        = True
 reflectsToken Actor { arity = a } = a > 0
 reflectsToken Data{}              = True
@@ -63,11 +64,11 @@ redirectToken = do
       byNode $ tok { inp = v, out = b }
       byNode $ red { portA = oT, portB = v, direction = Top }
 
--- TODO: should this basically almost be !reflectsToken ??
+-- this is basically almost !reflectsToken
 hasActionPotential :: NodeTP -> Bool
 hasActionPotential (Redirector { direction = BottomRight }) = True
--- hasActionPotential (Actor{}) = True
 hasActionPotential (Actor { arity = 0 }) = True
+hasActionPotential (Recursor{}         ) = True
 hasActionPotential (Data{}             ) = False -- Must be False or possible loops with T-App
 hasActionPotential _                     = False
 

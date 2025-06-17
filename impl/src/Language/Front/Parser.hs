@@ -15,7 +15,7 @@ import           Data.Functor                   ( ($>) )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Void
-import           Text.Megaparsec
+import           Text.Megaparsec         hiding ( token )
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
 
@@ -59,7 +59,7 @@ symbolN = L.symbol scn
 
 -- | single identifier, a-z
 identifier :: Parser Identifier
-identifier = T.pack <$> some (lowerChar <|> upperChar)
+identifier = T.pack <$> some (alphaNumChar <|> upperChar)
 
 -- | single mixfix operator
 operator :: Parser Identifier
@@ -110,14 +110,6 @@ doBlock = do
   action <- lexeme $ parens $ doAction -- TODO
   return $ Do action
 
--- | pure effect
-pureTerm :: Parser Term
-pureTerm = Pure <$> (lexeme (string "pure") *> parens term)
-
--- | pure effect
-strictTerm :: Parser Term
-strictTerm = Strict <$> (lexeme (string "strict") *> parens term)
-
 -- | single decimal number
 number :: Parser Term
 number = Num <$> lexeme L.decimal
@@ -154,16 +146,18 @@ action =
         <|> symbol "div"
         )
 
+token :: Parser Term
+token = symbol "!" >> pure Token
+
 singleton :: Parser Term
 singleton =
-  pureTerm
-    <|> strictTerm
-    <|> ifElse
+  ifElse
     <|> doBlock
     <|> number
     <|> unitV
     <|> try action
     <|> var
+    <|> token
     <|> parens block
 
 -- | single term, potentially a left application fold of many

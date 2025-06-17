@@ -35,11 +35,11 @@ data NodeTP
         | ActorC      {inp, cur :: Port, name :: T.Text, arity :: Int, args :: [EffectData]}
         | Recursor    {inp :: Port, boxed :: Lambda.Term }
         | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
-        -- custom
         | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
 
 instance Eq NodeTP where
   Eraser{}                  == Eraser{}                       = True
+  Token{}                   == Token{}                        = True -- for async actions
   Abstractor{}              == Redirector { direction = Top } = True -- both CON in SIC!
   Duplicator { level = l1 } == Duplicator { level = l2 }      = l1 == l2
   _                         == _                              = False

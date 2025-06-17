@@ -33,12 +33,12 @@ data NodeMS
         | ActorC      {inp, cur :: Port, name :: T.Text, arity :: Int, args :: [EffectData]}
         | Recursor    {inp :: Port, boxed :: Lambda.Term }
         | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
-        -- custom
         | BindN       {inp, arg, var :: Port, exec :: Bool}
         | UnitN       {inp, out :: Port}
 
 instance Eq NodeMS where
   Eraser{}                  == Eraser{}                  = True
+  Token{}                   == Token{}                   = True -- for async actions
   Abstractor{}              == Applicator{}              = True -- both CON in SIC!
   Duplicator { level = l1 } == Duplicator { level = l2 } = l1 == l2
   _                         == _                         = False
