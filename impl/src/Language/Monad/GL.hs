@@ -18,29 +18,27 @@ import qualified Graphics.UI.GLUT              as GL
 instance PortSpec NodeMS where
   portSpec node =
     let sd = sameDir
-    in
-      case node of
-        Initiator{}  -> [sd s]
-        Applicator{} -> [sd n, sd s, sd e]
-        Abstractor{} -> [sd n, sd s, sd e]
-        Eraser{}     -> [sd n]
-        Duplicator{} ->
-          [ (Vector2 0 0.9        , n)
-          , (Vector2 (-0.6) (-0.5), s)
-          , (Vector2 0.6 (-0.5)   , s)
-          ]
-        Actor{}       -> [sd n]
-        ActorC{}      -> [sd n, sd s]
-        Recursor{}    -> [sd n]
-        Token{}       -> [sd n, sd s]
-        Data{}        -> [sd n]
-        Multiplexer{} -> [sd n, sd s]
-        BindN{}       -> [sd n, sd s, sd e, sd e] -- TODO
-        UnitN{}       -> [sd n, sd s]
+    in  case node of
+          Initiator{}   -> [sd s]
+          Applicator{}  -> triangle
+          Abstractor{}  -> triangle
+          Eraser{}      -> [sd n]
+          Duplicator{}  -> triangle
+          Actor{}       -> [sd n]
+          ActorC{}      -> [sd n, sd s]
+          Recursor{}    -> [sd n]
+          Token{}       -> [sd n, sd s]
+          Data{}        -> [sd n]
+          Multiplexer{} -> [sd n, sd s]
+          BindN{}       -> triangle
+          UnitN{}       -> [sd n, sd s]
    where
     n = Vector2 0 1
     e = Vector2 1 0
     s = Vector2 0 (-1)
+
+    triangle =
+      [(Vector2 0 0.9, n), (Vector2 0.6 (-0.5), s), (Vector2 (-0.6) (-0.5), s)]
 
     la field = toEnum $ length (field node)
     alpha f = pi / (2 * la f)
@@ -64,7 +62,8 @@ renderNode node = drawPorts node >> case node of
   Applicator{}                   -> drawNode "@"
   Abstractor{}                   -> drawNode "L"
   Eraser{}                       -> drawNodeCircle "E"
-  Duplicator{}                   -> drawNodeBlack $ show $ level node
+  -- Duplicator{}                   -> drawNodeBlack $ show $ level node
+  Duplicator{}                   -> drawNodeBlack ""
   Actor { name = n, arity = a }  -> drawNode $ T.unpack n <> show a
   ActorC { name = n, arity = a } -> drawNode $ T.unpack n <> show a <> "c"
   Recursor{}                     -> drawNode "REC"

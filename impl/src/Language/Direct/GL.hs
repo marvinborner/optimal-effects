@@ -7,9 +7,9 @@
 module Language.Direct.GL
   () where
 
+import           Data.Direct
 import           Data.Effects                   ( EffectData(..) )
 import qualified Data.Text                     as T
-import           Data.Direct
 import           GraphRewriting.GL.Render
 import           GraphRewriting.Layout.PortSpec
 import           GraphRewriting.Strategies.Control
@@ -36,7 +36,7 @@ instance PortSpec NodeDS where
     s = Vector2 0 (-1)
 
     triangle =
-      [(Vector2 0 0.9, n), (Vector2 (-0.6) (-0.5), s), (Vector2 0.6 (-0.5), s)]
+      [(Vector2 0 0.9, n), (Vector2 0.6 (-0.5), s), (Vector2 (-0.6) (-0.5), s)]
 
     la field = toEnum $ length (field node)
     alpha f = pi / (2 * la f)
