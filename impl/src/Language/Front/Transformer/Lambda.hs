@@ -36,13 +36,14 @@ isRecursive n = \case
     isRecursive n clause || isRecursive n true || isRecursive n false
   Var n' | n == n'   -> True
          | otherwise -> False
-  App a b     -> isRecursive n a || isRecursive n b
-  UnitV       -> False
-  Num _       -> False
-  Act _ _     -> False
-  Token       -> False
-  Do (Prim t) -> isRecursive n t
-  Do (Unit t) -> isRecursive n t
+  App a b      -> isRecursive n a || isRecursive n b
+  UnitV        -> False
+  Num _        -> False
+  Act _ _      -> False
+  Token        -> False
+  Idx _        -> False -- hmm
+  Do  (Prim t) -> isRecursive n t
+  Do  (Unit t) -> isRecursive n t
   Do (Bind n' t a) | n == n'   -> isRecursive n t
                    | otherwise -> isRecursive n t || isRecursive n (Do a)
   e -> error $ show e
@@ -78,18 +79,19 @@ transform = \case
       d <- transform next
       put $ ctx { stk = s, clo = c }
       return $ L.app (L.lam d) wrapped
-  If clause true false -> do -- TODO: maybe we should also have a parallelIf? or would that just be fork
+  If clause true false -> do
     clause' <- transform clause
-    true'   <- transform (Abs "_" true)
-    false'  <- transform (Abs "_" false)
-    return $ L.app (L.app (L.app clause' true') false') (L.dat UnitData)
+    true'   <- transform true
+    false'  <- transform false
+    return $ L.app (L.app clause' true') false'
   Var n -> do
     (Context { stk = s }) <- get
     let maybeIdx = elemIndex n s
     case maybeIdx of
       Nothing  -> throwError $ "Identifier not found: " <> T.unpack n <> show s
       Just idx -> return $ L.idx idx
-  Abs n t -> do
+  Idx n   -> return $ L.idx n -- TODO: verify closedness in stack
+  Abs n t -> do -- these do not support recursion (typically anonymous)
     ctx@(Context { stk = s }) <- get
     put $ ctx { stk = n : s }
     t' <- transform t

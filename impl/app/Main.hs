@@ -60,9 +60,9 @@ actions :: Args -> IO ()
 actions Args { _argMode = ArgEval } = do
   program <- getContents
   case pipeline $ T.pack program of
-    Left err -> putStrLn err
-    Right core -> --TokenPassing.bench core
-      Monad.visualize core
+    Left  err  -> putStrLn err
+    Right core -> Monad.visualize core
+      -- Monad.visualize core
 
 main :: IO ()
 main = execParser opts >>= actions

@@ -24,6 +24,7 @@ data Term = Def Identifier [Identifier] Term Term
           | Rec Identifier Term Term -- only used temporarily in compilation phase
           | If Term Term Term
           | Var Identifier
+          | Idx Int
           | App Term Term
           | Abs Identifier Term
           | Num Int
@@ -46,6 +47,7 @@ instance Show Term where
   show (If clause true false) =
     "if (" <> show clause <> ") then " <> show true <> " else " <> show false
   show (Var n  ) = T.unpack n
+  show (Idx n  ) = "$" <> show n
   show (App a b) = "(" <> show a <> " " <> show b <> ")"
   show (Abs n b) = "λ" <> T.unpack n <> "." <> show b
   show (Num n  ) = show n

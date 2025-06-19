@@ -1,0 +1,34 @@
+m = do (return 10)
+
+-- duplicating & printing p here requires bookkeeping!
+f p = do (
+	u1 <- writeInt 1
+	add p 5
+)
+
+g s = do (
+	u2 <- writeInt 2
+	mul s 3
+)
+
+do (
+	-- (m >>= f) >>= g
+	res1 <- do (
+		y <- do (
+			x <- m
+			f x
+		)
+		g y
+	)
+
+	-- m >>= (\x -> (f x >>= g))
+	res2 <- do (
+		x <- m
+		do (
+			y <- f x
+			g y
+		)
+	)
+
+	writeInt (if (equal res1 res2 !) then 1 else 0)
+)

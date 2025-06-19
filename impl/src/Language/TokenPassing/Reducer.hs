@@ -56,10 +56,10 @@ layoutStep n = do
     rot <- angularMomentum n
     return (cgf, cf, sf, rot)
   Unsafe.adjustNode n
-    $ Position -- TODO: find good values
-    . sf (\x -> min 1000 (x * 0.9))
-    . cgf (\x -> min 10000 (x * 0.01))
-    . cf (\x -> min 10000 (100 / (x ^ 2 + 0.1)))
+    $ Position
+    . sf (\x -> 0.2 * (min 10 (x * 0.9)))
+    . cgf (\x -> 0.2 * (min 10 (x * 0.01)))
+    . cf (\x -> 0.2 * (min 10 (100 / (x ^ 2 + 0.1))))
     . position
   Unsafe.adjustNode n $ rot (* 0.9)
 
@@ -110,13 +110,11 @@ ruleTree = Branch
     , Leaf "Backpropagate Actor"       backpropagateActor
     , Leaf "Backpropagate Actor 2"     backpropagateActor2
     , Leaf "Backpropagate Uneffectful" backpropagateUneffectful
-    -- , Leaf "Backpropagate Uneffectful2"     backpropagateUneffectful2
     ]
   , Branch
     "Effectful"
     [ Leaf "Apply Actor"                    applyActor
     , Leaf "Apply Recursor"                 applyRecursor
-    -- , Leaf "Passthrough Right"              passthroughRight
     , Leaf "Initialize Partial Application" initializeDataPartial
     , Leaf "Apply Partially"                applyDataPartial
     ]

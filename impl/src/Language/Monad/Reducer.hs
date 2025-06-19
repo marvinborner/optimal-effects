@@ -57,9 +57,9 @@ layoutStep n = do
     return (cgf, cf, sf, rot)
   Unsafe.adjustNode n
     $ Position
-    . sf (\x -> min 10 (x * 0.9))
-    . cgf (\x -> min 10 (x * 0.01))
-    . cf (\x -> min 10 (100 / (x ^ 2 + 0.1)))
+    . sf (\x -> 0.2 * (min 10 (x * 0.9)))
+    . cgf (\x -> 0.2 * (min 10 (x * 0.01)))
+    . cf (\x -> 0.2 * (min 10 (100 / (x ^ 2 + 0.1))))
     . position
   Unsafe.adjustNode n $ rot (* 0.9)
 

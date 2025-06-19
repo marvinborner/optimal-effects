@@ -1,0 +1,20 @@
+-- x >>= id
+join x = do (
+	a <- x
+	a
+)
+
+do (
+	-- loud echo
+	_ <- join (do (
+		x <- readInt <>
+		return (writeInt (mul x x !))
+	))
+	
+	-- sum two numbers
+	join (do (
+		x <- readInt <>
+		y <- readInt <>
+		return (writeInt (add x y !))
+	))
+)

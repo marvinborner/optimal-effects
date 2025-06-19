@@ -1,0 +1,11 @@
+-- works only with dup labels or oracle
+
+-- lazy Fix by T6
+why = [[$0 [[$0 $1 $1]] $0] [[$2 [$0 $2 $1 [$0 $3]]]]]
+
+fac f n = (if! (equal n 0 !) then [1] else (
+  writeInt n
+  [mul n (f $0 (pred n !)) !]
+)) [$0]
+
+why fac 3

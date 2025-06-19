@@ -1,28 +1,11 @@
-true t f = t
-false t f = f
+-- cinc = [[[$1 ($2 $1 $0)]]] -- multi inc requires labels/oracle
+cadd = [[[[$3 $1 ($2 $1 $0)]]]]
 
-id x = x
-const x u = x
+c0 s z = z
+c1 s z = s z
+c2 s z = s (s z)
+c3 s z = s (s (s z))
 
-isZero a = a (const false) true
+toNum n = n succ 0
 
-pred n f x = (
-  extract k = k id
-  inc g h = h (g f)
-  const u = x
-  extract (n inc const)
-)
-
-a + b = (
-  add an bn = a an (b an bn)
-  add
-)
-
-a - b = b pred a
-
-a <= b =
-  if (isZero a) true
-  else if (isZero b) false
-  else ((pred a) <= (pred b))
-
-5 <= 5
+writeInt (toNum (cadd c2 c3))

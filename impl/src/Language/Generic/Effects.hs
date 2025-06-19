@@ -41,14 +41,6 @@ churchFalse p = replace $ do
   byNode $ gToken @m p tok
 
 -- TODO: allow IO via monad
--- TODO: passing without argument will execute unapplied, we should then just return the action node (??)
--- executeActor :: T.Text -> EffectFunction n
--- executeActor
---   :: (View [Port] n, View GenericNode n)
---   => T.Text
---   -> [EffectData]
---   -> Port
---   -> Rule n
 executeActor
   :: forall m n
    . (GenericNode m, View [Port] n, View m n)
@@ -67,11 +59,19 @@ executeActor "writeInt" [NumberData n] p = replace $ do
 executeActor "equal" [NumberData b, NumberData a] p
   | a == b = trace ("equal: " <> show a <> " " <> show b) $ churchTrue @m p
   | a /= b = trace ("not equal: " <> show a <> " " <> show b) $ churchFalse @m p
+executeActor "succ" [NumberData n] p = replace $ do
+  tok <- byEdge -- send token back!
+  trace ("succ: " <> show n) $ byNode $ gData @m tok (NumberData $ n + 1)
+  byNode $ gToken @m p tok
 executeActor "add" [NumberData b, NumberData a] p = replace $ do
   tok <- byEdge -- send token back!
   trace ("add: " <> show a <> " " <> show b) $ byNode $ gData @m
     tok
     (NumberData $ a + b)
+  byNode $ gToken @m p tok
+executeActor "pred" [NumberData n] p = replace $ do
+  tok <- byEdge -- send token back!
+  trace ("pred: " <> show n) $ byNode $ gData @m tok (NumberData $ n - 1)
   byNode $ gToken @m p tok
 executeActor "sub" [NumberData b, NumberData a] p = replace $ do
   tok <- byEdge -- send token back!

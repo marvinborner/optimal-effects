@@ -1,16 +1,16 @@
-foo = do (
-  x <- readInt <>
-  y <- writeInt 5
-  z <- readInt <>
-  foo
-)
+-- foo = do (
+--   x <- readInt <>
+--   y <- writeInt 5
+--   z <- readInt <>
+--   foo
+-- )
+-- 
+-- do (
+--   a <- foo
+--   writeInt a
+-- )
 
 do (
-  a <- foo
-  writeInt a
+  x <- do ( return 42 )
+  writeInt x
 )
-
--- do (
---   x <- do ( return 42 )
---   writeInt x
--- )

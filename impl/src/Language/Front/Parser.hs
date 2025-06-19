@@ -59,25 +59,23 @@ symbolN = L.symbol scn
 
 -- | single identifier, a-z
 identifier :: Parser Identifier
-identifier = T.pack <$> some (alphaNumChar <|> upperChar)
+identifier = T.pack <$> some (alphaNumChar <|> upperChar <|> char '_')
 
--- | single mixfix operator
-operator :: Parser Identifier
-operator = T.pack <$> some (oneOf ("+-*/=?!&|" :: String))
-
--- | infix function: <singleton> <operator> <singleton>
--- TODO: make mixier
-mixfix :: Parser Term
-mixfix = do
-  l  <- lexeme singleton
-  op <- lexeme operator
-  r  <- lexeme singleton
-  return $ App (App (Var op) l) r
-
--- | if expression: if (<term>) <term> else <term>
-ifElse :: Parser Term
-ifElse = do
+-- | synchronous if expression: if (<term>) then <term> else <term>
+ifElseSync :: Parser Term
+ifElseSync = do
   _      <- symbol "if"
+  clause <- lexemeN $ parens term
+  _      <- symbol "then"
+  true   <- lexemeN singleton
+  _      <- symbol "else"
+  false  <- lexeme singleton
+  return $ App (If clause (Abs "_" true) (Abs "_" false)) UnitV
+
+-- | asynchronous if expression: if! (<term>) then <term> else <term>
+ifElseAsync :: Parser Term
+ifElseAsync = do
+  _      <- symbol "if!"
   clause <- lexemeN $ parens term
   _      <- symbol "then"
   true   <- lexemeN singleton
@@ -122,12 +120,21 @@ unitV = lexeme (string "<>") $> UnitV
 var :: Parser Term
 var = Var <$> lexeme identifier
 
+anonymous :: Parser Term
+anonymous = Abs "_" <$> absed term
+  where absed = between (symbol "[" <* scn) (scn *> symbol "]")
+
+deBruijn :: Parser Term
+deBruijn = Idx <$> lexeme (char '$' *> L.decimal)
+
 -- | arity of action (TODO: even more temporary)
 actionArity :: Text -> Int
 actionArity "readInt"  = 1
 actionArity "writeInt" = 1
 actionArity "equal"    = 2
+actionArity "succ"     = 1
 actionArity "add"      = 2
+actionArity "pred"     = 1
 actionArity "sub"      = 2
 actionArity "mul"      = 2
 actionArity "div"      = 2
@@ -140,7 +147,9 @@ action =
     <$> (   symbol "readInt"
         <|> symbol "writeInt"
         <|> symbol "equal"
+        <|> symbol "succ"
         <|> symbol "add"
+        <|> symbol "pred"
         <|> symbol "sub"
         <|> symbol "mul"
         <|> symbol "div"
@@ -151,8 +160,11 @@ token = symbol "!" >> pure Token
 
 singleton :: Parser Term
 singleton =
-  ifElse
+  ifElseAsync
+    <|> ifElseSync
     <|> doBlock
+    <|> anonymous
+    <|> deBruijn
     <|> number
     <|> unitV
     <|> try action
@@ -162,7 +174,7 @@ singleton =
 
 -- | single term, potentially a left application fold of many
 term :: Parser Term
-term = foldl1 App <$> some (lexeme $ try mixfix <|> singleton)
+term = foldl1 App <$> some (lexeme singleton)
 
 -- | single term in definition-chain that's desugared to an empty definition
 -- | or just the term if there's nothing next
@@ -170,18 +182,6 @@ toplevelTerm :: Parser Term
 toplevelTerm = do
   t <- term
   try (Def "_" [] t <$> block) <|> return t
-
--- | single infix definition: <identifier> <operator> <identifier> = <term>
--- TODO: make mixier
-mixDefinition :: Parser Term
-mixDefinition = do
-  l    <- lexeme identifier
-  op   <- lexeme operator
-  r    <- lexeme identifier
-  _    <- symbolN "="
-  body <- lexemeN term
-  next <- block
-  return $ Def op [l, r] body next
 
 -- | single definition: <identifier> <identifier>* = <term>
 definition :: Parser Term
@@ -195,7 +195,7 @@ definition = do
 
 -- | single "let..in" block: many definitions before a single term
 block :: Parser Term
-block = scn *> (try mixDefinition <|> try definition <|> toplevelTerm) <* scn
+block = scn *> (try definition <|> toplevelTerm) <* scn
 
 -- TODO: add preprocessor commands?
 program :: Parser Term

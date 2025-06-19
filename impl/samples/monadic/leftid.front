@@ -1,0 +1,19 @@
+a = 42
+
+f x = do (
+	u <- writeInt x
+	mul x 2
+)
+
+do (
+	-- a >>= f
+	res1 <- do (
+		x <- do (return a)
+		f x
+	)
+
+	-- f a
+	res2 <- f a
+
+	writeInt (if (equal res1 res2 !) then 1 else 0)
+)

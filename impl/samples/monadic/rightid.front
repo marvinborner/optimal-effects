@@ -1,0 +1,17 @@
+m = do (
+    u <- writeInt 100
+    return 200
+)
+
+do (
+	-- m >>= return
+    res1 <- do (
+        x <- m
+        return x
+    )
+
+	-- m
+    res2 <- m
+
+    writeInt (if (equal res1 res2 !) then 1 else 0)
+)

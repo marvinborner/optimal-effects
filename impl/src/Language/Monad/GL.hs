@@ -60,24 +60,19 @@ instance Render n => Render (Wrapper n) where
       Control{} -> GL.renderPrimitive GL.LineLoop (circle 1.2 1.2 20)
 
 renderNode node = drawPorts node >> case node of
-  Initiator{}  -> drawNode "I"
-  Applicator{} -> drawNode "@"
-  Abstractor{} -> drawNode "L"
-  Eraser{}     -> drawNode "E"
-  Duplicator{} -> do
-    GL.preservingMatrix $ GL.renderPrimitive GL.LineLoop $ do
-      vertex2 (0, 0.9)
-      vertex2 (-1, -0.5)
-      vertex2 (1, -0.5)
-    renderString $ show $ level node
+  Initiator{}                    -> drawNodeCircle "I"
+  Applicator{}                   -> drawNode "@"
+  Abstractor{}                   -> drawNode "L"
+  Eraser{}                       -> drawNodeCircle "E"
+  Duplicator{}                   -> drawNodeBlack $ show $ level node
   Actor { name = n, arity = a }  -> drawNode $ T.unpack n <> show a
   ActorC { name = n, arity = a } -> drawNode $ T.unpack n <> show a <> "c"
   Recursor{}                     -> drawNode "REC"
-  Token{}                        -> drawNode "T"
-  Data { dat = UnitData }        -> drawNode "()"
-  Data { dat = StringData s }    -> drawNode $ "D=" <> s
-  Data { dat = NumberData n }    -> drawNode $ "D=" <> show n
-  Multiplexer{}                  -> drawNode "M"
+  Token{}                        -> drawNodeCircle "T"
+  Data { dat = UnitData }        -> drawNodeCircle "()"
+  Data { dat = StringData s }    -> drawNodeCircle $ "D=" <> s
+  Data { dat = NumberData n }    -> drawNodeCircle $ "D=" <> show n
+  Multiplexer{}                  -> drawNodeCircle "M"
   BindN{}                        -> drawNode ">>="
   UnitN{}                        -> drawNode "<>"
 
@@ -99,5 +94,22 @@ drawPort factor pos = GL.preservingMatrix $ do
   GL.renderPrimitive GL.Polygon (circle (factor * 0.15) (factor * 0.15) 20)
 
 drawNode label = do
+  GL.preservingMatrix $ GL.renderPrimitive GL.LineLoop $ do
+    vertex2 (0, 0.9)
+    vertex2 (-1, -0.5)
+    vertex2 (1, -0.5)
+  renderString label
+
+drawNodeCircle label = do
   GL.renderPrimitive GL.LineLoop (circle 1 1 20)
+  renderString label
+
+drawNodeBlack label = do
+  GL.color (GL.Color3 0 0 0 :: GL.Color3 GL.GLfloat)
+  GL.preservingMatrix $ GL.renderPrimitive GL.Polygon $ do
+    vertex2 (0, 0.9)
+    vertex2 (-1, -0.5)
+    vertex2 (1, -0.5)
+
+  GL.color (GL.Color3 1 1 1 :: GL.Color3 GL.GLfloat)
   renderString label

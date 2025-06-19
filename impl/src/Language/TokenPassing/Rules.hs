@@ -1,6 +1,3 @@
--- Parts were originally written for lambdascope in `Rules.hs`
---   under the BSD-3-Clause License (as in src/GraphRewriting/LICENSE)
--- Copyright (c) 2010, Jan Rochel
 -- Copyright (c) 2025, Marvin Borner
 
 {-# LANGUAGE TypeApplications, FlexibleContexts, ScopedTypeVariables, FlexibleInstances #-}
@@ -80,7 +77,6 @@ backpropagateActor = do -- ==> there is an action somewhere inside b
     byNode $ a { direction = BottomRight }
     byNode b
 
--- TODO: is this fully correct?
 backpropagateActor2 :: (View [Port] n, View NodeTP n) => Rule n
 backpropagateActor2 = do -- ==> there is an action somewhere inside b
   a@(Redirector { direction = Top }) :-: b <- activePair
@@ -96,26 +92,6 @@ backpropagateUneffectful = do -- ==> there is no immediate action potential in b
   replace $ do
     byNode $ a { direction = Top }
     byNode b
-
--- is this fully correct?
--- THIS is certisfiably wrong, can cause infinite loops
--- TODO: is something like this still required somehow?
--- backpropagateUneffectful2 :: (View [Port] n, View NodeTP n) => Rule n
--- backpropagateUneffectful2 = do -- ==> there is no immediate action potential in b
---   a@(Redirector { direction = Top }) :-: b <- activePair
---   guard $ not $ hasActionPotential b
---   replace $ do
---     byNode $ a { direction = BottomLeft }
---     byNode b
-
--- TODO: WHAT IS THIS RULE?? does it have any use?
--- passthroughRight :: (View [Port] n, View NodeTP n) => Rule n
--- passthroughRight = do
---   red@(Redirector { direction = BottomRight }) :-: n <- activePair
---   guard $ not $ isToken n
---   replace $ do
---     byNode $ red { direction = Top } -- everything else stays!
---     byNode n
 
 initializeDataPartial :: (View [Port] n, View NodeTP n) => Rule n
 initializeDataPartial = do
