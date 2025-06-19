@@ -10,7 +10,7 @@ import qualified Data.Front                    as Front
                                                 ( Term(..) )
 import qualified Data.Lambda                   as Lambda
 import qualified Data.Text                     as T
-import qualified Data.TokenPassing             as TokenPassing
+import qualified Data.Direct             as Direct
 import           Debug.Trace
 import qualified Language.Front.Parser         as Front
                                                 ( parseProgram )
@@ -20,14 +20,14 @@ import qualified Language.Front.Transformer.Lambda
 import qualified Language.Lambda.Transformer.Monad
                                                as Lambda
                                                 ( transformMonad )
-import qualified Language.Lambda.Transformer.TokenPassing
+import qualified Language.Lambda.Transformer.Direct
                                                as Lambda
-                                                ( transformTokenPassing )
+                                                ( transformDirect )
 import qualified Language.Monad.Reducer        as Monad
                                                 ( bench
                                                 , visualize
                                                 )
-import qualified Language.TokenPassing.Reducer as TokenPassing
+import qualified Language.Direct.Reducer as Direct
                                                 ( bench
                                                 , visualize
                                                 )
@@ -49,7 +49,7 @@ newtype Args = Args
 args :: Parser Args
 args = pure $ Args ArgEval
 
--- pipeline :: T.Text -> Either String TokenPassing.Term
+-- pipeline :: T.Text -> Either String Direct.Term
 pipeline input = do
   front  <- Front.parseProgram input
   lambda <- Front.transformLambda front

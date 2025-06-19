@@ -4,18 +4,18 @@
 -- Copyright (c) 2024, Marvin Borner
 
 {-# LANGUAGE FlexibleInstances #-}
-module Language.TokenPassing.GL
+module Language.Direct.GL
   () where
 
 import           Data.Effects                   ( EffectData(..) )
 import qualified Data.Text                     as T
-import           Data.TokenPassing
+import           Data.Direct
 import           GraphRewriting.GL.Render
 import           GraphRewriting.Layout.PortSpec
 import           GraphRewriting.Strategies.Control
 import qualified Graphics.UI.GLUT              as GL
 
-instance PortSpec NodeTP where
+instance PortSpec NodeDS where
   portSpec node =
     let sd = sameDir
     in  case node of
@@ -45,7 +45,7 @@ instance PortSpec NodeTP where
       Vector2 (x1 * x + x2 * y) (y1 * x + y2 * y)
     sws = Vector2 (-0.7) (-0.7)
 
-instance Render NodeTP where
+instance Render NodeDS where
   render = renderNode
 
 instance Render n => Render (Wrapper n) where
@@ -59,7 +59,8 @@ renderNode node = drawPorts node >> case node of
   Initiator{}                           -> drawNodeCircle "I"
   Abstractor{}                          -> drawNode "L"
   Eraser{}                              -> drawNodeCircle "E"
-  Duplicator{}                          -> drawNodeBlack $ show $ level node
+  -- Duplicator{}                          -> drawNodeBlack $ show $ level node
+  Duplicator{}                          -> drawNodeBlack ""
   Redirector { direction = Top }        -> drawNode "@"
   Redirector { direction = BottomRight } -> drawNode "@R"
   Redirector { direction = BottomLeft } -> drawNode "@L"
@@ -72,7 +73,7 @@ renderNode node = drawPorts node >> case node of
   Data { dat = NumberData n }           -> drawNodeCircle $ "D=" <> show n
   Multiplexer{}                         -> drawNodeCircle "M"
 
-drawPorts :: NodeTP -> IO ()
+drawPorts :: NodeDS -> IO ()
 drawPorts n = sequence_
   [ drawPort (factor p) pos | (pos, p) <- positions `zip` ports ] where
   positions = relPortPos n

@@ -1,16 +1,16 @@
 -- Copyright (c) 2025, Marvin Borner
 {-# LANGUAGE FlexibleContexts #-}
 
-module Language.Lambda.Transformer.TokenPassing
-  ( transformTokenPassing
+module Language.Lambda.Transformer.Direct
+  ( transformDirect
   , executeRecursor
   ) where
 
 import           Control.Monad.State
+import           Data.Direct
 import           Data.Fix
 import           Data.Lambda                    ( para )
 import qualified Data.Lambda                   as L
-import           Data.TokenPassing
 import           GraphRewriting.Graph
 import           GraphRewriting.Graph.Write
 import           GraphRewriting.Pattern
@@ -28,8 +28,8 @@ instance Semigroup Context where
   ctx@(Context { bindings = bs1 }) <> (Context { bindings = bs2 }) =
     ctx { bindings = bs1 <> bs2 }
 
-transformTokenPassing :: L.Term -> Either String (Graph NodeTP)
-transformTokenPassing term = do
+transformDirect :: L.Term -> Either String (Graph NodeDS)
+transformDirect term = do
   let (bindings, graph) = flip runGraph emptyGraph $ do
         context@(Context { port = n, bindings = bs }) <- compile newNode
                                                                  newEdge
@@ -49,7 +49,7 @@ transformTokenPassing term = do
 -- TODO: translate token by app match
 compile
   :: Monad m
-  => (NodeTP -> m a1)
+  => (NodeDS -> m a1)
   -> m Port
   -> (Port -> Port -> m a2)
   -> L.Term
@@ -106,14 +106,14 @@ compile node edge conn = para $ \case
 
 -- | create multiplexer of all =0 bindings
 -- TODO: we could additionally return a new context with the popped bindings
-bindName :: Monad m => (NodeTP -> m a) -> m Port -> p -> Context -> m Port
+bindName :: Monad m => (NodeDS -> m a) -> m Port -> p -> Context -> m Port
 bindName node edge conn (Context { bindings = bs }) = do
   x <- edge
   let bound = snd <$> filter (\(i, _) -> i == 0) bs
   node Multiplexer { out = x, ins = bound }
   return x
 
-executeRecursor :: (View [Port] n, View NodeTP n) => L.Term -> Port -> Rule n
+executeRecursor :: (View [Port] n, View NodeDS n) => L.Term -> Port -> Rule n
 executeRecursor boxed o = replace $ do
   tok                    <- byEdge
   (Context { port = p }) <- compile byNode byEdge byWire boxed

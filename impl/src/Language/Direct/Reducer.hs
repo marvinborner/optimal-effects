@@ -5,13 +5,13 @@
 
 {-# LANGUAGE ScopedTypeVariables, TypeApplications, AllowAmbiguousTypes, FlexibleContexts, FlexibleInstances #-}
 
-module Language.TokenPassing.Reducer
+module Language.Direct.Reducer
   ( visualize
   , bench
   ) where
 
 import           Data.Foldable                  ( toList )
-import           Data.TokenPassing
+import           Data.Direct
 import           Data.Traversable               ( mapAccumL )
 import           Data.Vector.V2                 ( Vector2(..) )
 import           GraphRewriting.GL.Render
@@ -31,8 +31,8 @@ import           GraphRewriting.Strategies.Control
 import           GraphRewriting.Strategies.LeftmostOutermost
 import           Language.Generic.Node
 import           Language.Generic.Rules
-import           Language.TokenPassing.GL
-import           Language.TokenPassing.Rules
+import           Language.Direct.GL
+import           Language.Direct.Rules
 
 -- TODO
 import           GraphRewriting.Pattern.InteractionNet
@@ -65,12 +65,12 @@ layoutStep n = do
 
 -- | Visualize reduction to normal form
 -- TODO: only app should use IO
-visualize :: Graph NodeTP -> IO ()
+visualize :: Graph NodeDS -> IO ()
 visualize term = do
   (_, _) <- UI.initialise
-  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeTP) term
+  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeDS) term
   let layoutGraph = Layout.wrapGraph hypergraph
-  UI.run 50 id layoutStep layoutGraph (ruleTree @NodeTP)
+  UI.run 50 id layoutStep layoutGraph (ruleTree @NodeDS)
 
 -- from LambdaScope/GraphRewriting
 incIndex :: Int -> [Int] -> [Int]
@@ -80,21 +80,21 @@ incIndex n (i : is) = i : incIndex (n - 1) is
 incIndex n []       = 0 : incIndex (n - 1) []
 
 -- from LambdaScope/GraphRewriting
-bench :: Graph NodeTP -> IO ()
+bench :: Graph NodeDS -> IO ()
 bench term = do
   (_, _) <- UI.initialise
-  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeTP) term
-  let indices = evalGraph (benchmark $ toList $ ruleTree @NodeTP)
+  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeDS) term
+  let indices = evalGraph (benchmark $ toList $ ruleTree @NodeDS)
                           (Control.wrapGraph hypergraph)
   let indexTable = foldl (flip incIndex) [] indices
   let (_, numTree) = mapAccumL (\(i : is) _ -> (is, i))
                                (indexTable ++ repeat 0)
-                               (ruleTree @NodeTP @(Control.Wrapper NodeTP))
+                               (ruleTree @NodeDS @(Control.Wrapper NodeDS))
   putStrLn $ showLabelledTree 2 0 (+) numTree
 
 ruleTree
   :: forall m n
-   . (GenericNode m, View NodeTP n, View [Port] n, View m n)
+   . (GenericNode m, View NodeDS n, View [Port] n, View m n)
   => LabelledTree (Rule n)
 ruleTree = Branch
   "All"

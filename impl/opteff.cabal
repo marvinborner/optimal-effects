@@ -25,7 +25,7 @@ library
   exposed-modules:
       Data.LambdaScope
       Data.Monad
-      Data.TokenPassing
+      Data.Direct
       Data.Front
       Data.Lambda
       Data.View
@@ -59,15 +59,15 @@ library
       Language.LambdaScope.GL
       Language.LambdaScope.Reducer
       Language.LambdaScope.Rules
-      Language.TokenPassing.GL
-      Language.TokenPassing.Reducer
-      Language.TokenPassing.Rules
+      Language.Direct.GL
+      Language.Direct.Reducer
+      Language.Direct.Rules
       Language.Monad.GL
       Language.Monad.Reducer
       Language.Monad.Rules
       Language.Front.Parser
       Language.Front.Transformer.Lambda
-      Language.Lambda.Transformer.TokenPassing
+      Language.Lambda.Transformer.Direct
       Language.Lambda.Transformer.Monad
       Language.Generic.Effects
       Language.Generic.Node

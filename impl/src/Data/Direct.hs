@@ -4,8 +4,8 @@
 -- Copyright (c) 2024, Marvin Borner
 
 {-# LANGUAGE KindSignatures, UndecidableInstances, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses #-}
-module Data.TokenPassing
-  ( NodeTP(..)
+module Data.Direct
+  ( NodeDS(..)
   , AppDir(..)
   , pp
   ) where
@@ -24,7 +24,7 @@ import           Language.Generic.Node
 data AppDir = Top | BottomLeft | BottomRight
 
 -- | The signature of our graph
-data NodeTP
+data NodeDS
         = Initiator   {out :: Port}
         | Abstractor  {inp, body, var :: Port}
         | Eraser      {inp :: Port}
@@ -37,14 +37,14 @@ data NodeTP
         | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
         | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
 
-instance Eq NodeTP where
+instance Eq NodeDS where
   Eraser{}                  == Eraser{}                       = True
   Token{}                   == Token{}                        = True -- for async actions
   Abstractor{}              == Redirector { direction = Top } = True -- both CON in SIC!
   Duplicator { level = l1 } == Duplicator { level = l2 }      = l1 == l2
   _                         == _                              = False
 
-instance View [Port] NodeTP where
+instance View [Port] NodeDS where
   inspect node = case node of
     Initiator { out = o }                          -> [o]
     Abstractor { inp = i, body = b, var = v }      -> [i, b, v]
@@ -73,11 +73,11 @@ instance View [Port] NodeTP where
     Token{} -> node { inp = i, out = o } where [i, o] = ports
     Data{}  -> node { inp = i } where [i] = ports
 
-instance INet NodeTP where
+instance INet NodeDS where
   principalPort = pp
 
 -- The number is an index that specifies which port is the principal port out of the list of ports
-pp :: NodeTP -> Port
+pp :: NodeDS -> Port
 pp node = case node of
   Initiator { out = o }                        -> o
   Abstractor { inp = i, body = b, var = v }    -> i
@@ -93,7 +93,7 @@ pp node = case node of
   Token { inp = i }                            -> i
   Data { inp = i }                             -> i
 
-instance GenericNode NodeTP where
+instance GenericNode NodeDS where
   gInitiator  = Initiator
   gApplicator = \inp func arg ->
     Redirector { portA = inp, portB = func, portC = arg, direction = Top }
