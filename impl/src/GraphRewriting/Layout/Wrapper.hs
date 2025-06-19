@@ -2,7 +2,6 @@
 module GraphRewriting.Layout.Wrapper
   ( Wrapper(..)
   , wrapGraph
-  , wrappee
   , updateWrappee
   , module Data.View
   , module GraphRewriting.Graph.Types

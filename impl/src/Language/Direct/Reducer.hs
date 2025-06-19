@@ -10,8 +10,8 @@ module Language.Direct.Reducer
   , bench
   ) where
 
-import           Data.Foldable                  ( toList )
 import           Data.Direct
+import           Data.Foldable                  ( toList )
 import           Data.Traversable               ( mapAccumL )
 import           Data.Vector.V2                 ( Vector2(..) )
 import           GraphRewriting.GL.Render
@@ -29,13 +29,10 @@ import           GraphRewriting.Rule
 import           GraphRewriting.Strategies.Control
                                                as Control
 import           GraphRewriting.Strategies.LeftmostOutermost
-import           Language.Generic.Node
-import           Language.Generic.Rules
 import           Language.Direct.GL
 import           Language.Direct.Rules
-
--- TODO
-import           GraphRewriting.Pattern.InteractionNet
+import           Language.Generic.Node
+import           Language.Generic.Rules
 
 instance Render n => Render (Layout.Wrapper n) where
   render = render . wrappee

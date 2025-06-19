@@ -1,6 +1,6 @@
 {-# LANGUAGE UnicodeSyntax, FlexibleContexts #-}
 -- | Patterns allow monadic scrutiny of the graph (modifications are not possible) while keeping track of matched nodes (history). A 'Pattern' is interpreted by 'runPattern' that returns a result for each position in the graph where the pattern matches. It is allowed to 'fail' inside the 'Pattern' monad, indicating that the pattern does not match, which corresponds to conditional rewriting.
-module GraphRewriting.Pattern (module GraphRewriting.Pattern, PatternT, Pattern, Match, (<|>)) where
+module GraphRewriting.Pattern (module GraphRewriting.Pattern, PatternT, Match, (<|>)) where
 
 import Prelude.Unicode
 import GraphRewriting.Pattern.Internal

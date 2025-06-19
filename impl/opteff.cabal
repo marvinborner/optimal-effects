@@ -23,7 +23,6 @@ source-repository head
 
 library
   exposed-modules:
-      Data.LambdaScope
       Data.Monad
       Data.Direct
       Data.Front
@@ -56,9 +55,6 @@ library
       GraphRewriting.Rule
       GraphRewriting.Strategies.Control
       GraphRewriting.Strategies.LeftmostOutermost
-      Language.LambdaScope.GL
-      Language.LambdaScope.Reducer
-      Language.LambdaScope.Rules
       Language.Direct.GL
       Language.Direct.Reducer
       Language.Direct.Rules
@@ -83,7 +79,10 @@ library
       LambdaCase
       OverloadedStrings
       QuantifiedConstraints
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+
+  -- hide warnings of GraphRewriting
+  ghc-options: -Wno-tabs -Wno-deprecations -Wno-noncanonical-monoid-instances -Wno-noncanonical-monad-instances -Wno-x-partial
+
   build-depends:
       AC-Vector >=2.4.0
     , base >=4.9 && <5
@@ -107,7 +106,6 @@ executable opteff-exe
       Paths_opteff
   hs-source-dirs:
       app
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     opteff
     , base >=4.9 && <5
