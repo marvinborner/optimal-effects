@@ -26,7 +26,8 @@ import qualified Language.Lambda.Transformer.Monad
 import qualified Language.Monad.Reducer        as Monad
 import           Options.Applicative
 
-data ArgMode = Visualize | Benchmark
+data ArgMode = Visualize | Benchmark | BenchmarkRandom
+  deriving Eq
 
 data Args = Args
   { _argMode   :: ArgMode
@@ -38,6 +39,11 @@ mode =
   flag' Visualize (long "visualize" <> short 'v' <> help "Visualize reduction")
     <|> flag' Benchmark
               (long "benchmark" <> short 'b' <> help "Benchmark reduction")
+    <|> flag'
+          BenchmarkRandom
+          (long "benchmark-random" <> short 'r' <> help
+            "Benchmark reduction with random rules"
+          )
 
 args :: Parser Args
 args = Args <$> (mode <|> pure Visualize) <*> strOption
@@ -52,12 +58,13 @@ lambdaPipeline target input = do
 
 monadPipeline Visualize =
   either putStrLn Monad.visualize . Lambda.transformMonad
-monadPipeline Benchmark = either putStrLn Monad.bench . Lambda.transformMonad
+monadPipeline mode = either putStrLn bench . Lambda.transformMonad
+  where bench = Monad.bench (mode == BenchmarkRandom)
 
 directPipeline Visualize =
   either putStrLn Direct.visualize . Lambda.transformDirect
-directPipeline Benchmark =
-  either putStrLn Direct.bench . Lambda.transformDirect
+directPipeline mode = either putStrLn bench . Lambda.transformDirect
+  where bench = Direct.bench (mode == BenchmarkRandom)
 
 actions :: Args -> IO ()
 actions Args { _argMode = mode, _argTarget = target } = do

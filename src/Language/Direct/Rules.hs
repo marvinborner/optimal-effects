@@ -5,6 +5,7 @@ module Language.Direct.Rules where
 
 import           Control.Applicative            ( optional )
 import           Control.Monad
+import           Data.Direct
 import           Data.Effects
 import           Data.List                      ( delete
                                                 , elemIndex
@@ -12,7 +13,6 @@ import           Data.List                      ( delete
                                                 )
 import           Data.Maybe                     ( fromJust )
 import qualified Data.Text                     as T
-import           Data.Direct
 import           GraphRewriting.Graph.Read
                                          hiding ( Node )
 import           GraphRewriting.Graph.Write
@@ -25,6 +25,7 @@ import           GraphRewriting.Rule
 import           GraphRewriting.Strategies.Control
                                                as Control
 import           Language.Generic.Effects
+import           Language.Generic.Node
 import           Language.Generic.Rules
 import           Language.Lambda.Transformer.Direct
                                                 ( executeRecursor )
@@ -69,10 +70,17 @@ hasActionPotential (Recursor{}         ) = True
 hasActionPotential (Data{}             ) = False -- Must be False or possible loops with T-App
 hasActionPotential _                     = False
 
+isControlling :: NodeDS -> Bool
+isControlling (Token{}     ) = True
+isControlling (Duplicator{}) = True
+isControlling (Eraser{}    ) = True
+isControlling _              = False
+
 backpropagateActor :: (View [Port] n, View NodeDS n) => Rule n
 backpropagateActor = do -- ==> there is an action somewhere inside b
   a@(Redirector { direction = BottomLeft }) :-: b <- activePair
   guard $ hasActionPotential b
+  guard $ not $ isControlling b
   replace $ do
     byNode $ a { direction = BottomRight }
     byNode b
@@ -81,6 +89,7 @@ backpropagateActor2 :: (View [Port] n, View NodeDS n) => Rule n
 backpropagateActor2 = do -- ==> there is an action somewhere inside b
   a@(Redirector { direction = Top }) :-: b <- activePair
   guard $ hasActionPotential b
+  guard $ not $ isControlling b
   replace $ do
     byNode $ a { direction = BottomRight }
     byNode b
@@ -89,6 +98,7 @@ backpropagateUneffectful :: (View [Port] n, View NodeDS n) => Rule n
 backpropagateUneffectful = do -- ==> there is no immediate action potential in b
   a@(Redirector { direction = BottomLeft }) :-: b <- activePair
   guard $ not $ hasActionPotential b
+  guard $ not $ isControlling b
   replace $ do
     byNode $ a { direction = Top }
     byNode b

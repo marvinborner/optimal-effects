@@ -1,0 +1,16 @@
+All 1250
+  Duplicate 132
+  Annihilate 135
+  Erase 64
+  Multiplexer 150
+  Token 588
+    Redirect Token 249
+    Reflect Token 126
+    Backpropagate Actor 33
+    Backpropagate Actor 2 55
+    Backpropagate Uneffectful 125
+  Effectful 181
+    Apply Actor 41
+    Apply Recursor 10
+    Initialize Partial Application 65
+    Apply Partially 65

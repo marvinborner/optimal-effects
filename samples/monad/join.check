@@ -1,0 +1,14 @@
+All 57
+  Duplicate 4
+  Annihilate 13
+  Erase 1
+  Multiplexer 0
+  Token 14
+    Rotate Bind 6
+    Pop Unit 2
+    Pop Bind 6
+  Effectful 25
+    Apply Actor 7
+    Apply Recursor 0
+    Initialize Partial Application 9
+    Apply Partially 9

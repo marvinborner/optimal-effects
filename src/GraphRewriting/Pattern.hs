@@ -11,7 +11,6 @@ import Data.Functor.Identity
 import qualified Data.Set as Set (empty, insert, member)
 import Control.Applicative
 
-
 -- | A pattern represents a graph scrutiny that memorises all the scrutinised nodes during matching.
 type Pattern n = PatternT n Identity
 

@@ -18,6 +18,7 @@ import Data.Functor
 import Data.Traversable
 import Prelude hiding (concat, concatMap, or, elem, foldr, any, mapM, unzip)
 
+import Debug.Trace
 
 data GlobalVars n = GlobalVars
 	{graph        :: Graph n,

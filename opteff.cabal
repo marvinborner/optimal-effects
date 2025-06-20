@@ -90,6 +90,8 @@ library
     , containers >=0.3 && <0.7
     , GLUT >=2.2 && <3
     , OpenGL >= 3.0 && <4
+    , random-shuffle
+    , random
     , megaparsec
  -- TOOD: don't use ListT
     , mtl <=2.2.2

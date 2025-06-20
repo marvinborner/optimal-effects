@@ -121,7 +121,7 @@ var :: Parser Term
 var = Var <$> lexeme identifier
 
 anonymous :: Parser Term
-anonymous = Abs "_" <$> absed term
+anonymous = Abs "_" <$> absed block
   where absed = between (symbol "[" <* scn) (scn *> symbol "]")
 
 deBruijn :: Parser Term
@@ -163,13 +163,13 @@ singleton =
   ifElseAsync
     <|> ifElseSync
     <|> doBlock
-    <|> anonymous
     <|> deBruijn
     <|> number
     <|> unitV
     <|> try action
     <|> var
     <|> token
+    <|> anonymous
     <|> parens block
 
 -- | single term, potentially a left application fold of many

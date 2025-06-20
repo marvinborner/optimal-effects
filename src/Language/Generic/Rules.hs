@@ -55,7 +55,7 @@ transpose' n xs = transpose xs
 commute :: forall m n . (GenericNode m, View [Port] n, View m n) => Rule n
 commute = do
   n1 :-: n2 <- activePair
-  require (n1 /= n2) -- TODO: replace by linear
+  require $ n1 /= n2 -- TODO: replace by linear
   let ports1 = inspect n1 :: [Port]
   let ports2 = inspect n2 :: [Port]
   let (pp1, pp1idx) =
@@ -94,20 +94,6 @@ annihilate = do
   let aux2 = gpp @m n2 `delete` inspect n2
   rewire $ [ [a1, a2] | (a1, a2) <- aux1 `zip` aux2 ]
 
-eliminateDuplicator
-  :: forall m n
-   . (GenericNode m, View [Port] m, View [Port] n, View m n)
-  => Rule n
-eliminateDuplicator = do
-  era <- node
-  require $ isEraser @m era
-  let [iE] = inspect era :: [Port]
-  dup <- neighbour =<< previous
-  require $ isDuplicator @m dup
-  let [iD, o1, o2] = inspect dup :: [Port]
-  require $ iE == o1 || iE == o2
-  if iE == o1 then rewire [[iD, o2]] else rewire [[iD, o1]]
-
 eraser :: forall m n . (GenericNode m, View [Port] n, View m n) => Rule n
 eraser = do
   rewrite <- commute @m
@@ -119,5 +105,7 @@ duplicate :: forall m n . (GenericNode m, View [Port] n, View m n) => Rule n
 duplicate = do
   rewrite <- commute @m
   dup     <- liftReader . inspectNode =<< previous
+  other   <- (liftReader . inspectNode) . head . tail =<< history
   require $ isDuplicator @m dup
+  require $ not $ isEraser @m other -- do not duplicate erasers
   return rewrite

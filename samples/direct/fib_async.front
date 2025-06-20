@@ -6,4 +6,4 @@ fib n = (
       else (add (fib (sub n 1 !)) (fib (sub n 2 !)))
 )
 
-writeInt (fib 7)
+writeInt (fib 4)

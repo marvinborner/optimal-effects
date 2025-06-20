@@ -33,6 +33,8 @@ import           Language.Direct.GL
 import           Language.Direct.Rules
 import           Language.Generic.Node
 import           Language.Generic.Rules
+import           System.Random
+import           System.Random.Shuffle
 
 instance Render n => Render (Layout.Wrapper n) where
   render = render . wrappee
@@ -77,11 +79,14 @@ incIndex n (i : is) = i : incIndex (n - 1) is
 incIndex n []       = 0 : incIndex (n - 1) []
 
 -- from LambdaScope/GraphRewriting
-bench :: Graph NodeDS -> IO ()
-bench term = do
+bench :: Bool -> Graph NodeDS -> IO ()
+bench random term = do
   (_, _) <- UI.initialise
   let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeDS) term
-  let indices = evalGraph (benchmark $ toList $ ruleTree @NodeDS)
+  rng <- newStdGen
+  let func | random    = benchmarkRandom rng
+           | otherwise = benchmark
+  let indices = evalGraph (func $ toList $ ruleTree @NodeDS)
                           (Control.wrapGraph hypergraph)
   let indexTable = foldl (flip incIndex) [] indices
   let (_, numTree) = mapAccumL (\(i : is) _ -> (is, i))
@@ -96,7 +101,6 @@ ruleTree
 ruleTree = Branch
   "All"
   [ Leaf "Duplicate" $ duplicate @m
-  , Leaf "Eliminate" $ eliminateDuplicator @m
   , Leaf "Annihilate" $ annihilate @m
   , Leaf "Erase" $ eraser @m
   , Leaf "Multiplexer" $ compileShare @m

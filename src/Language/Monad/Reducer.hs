@@ -25,6 +25,7 @@ import           GraphRewriting.Layout.Gravitation
 import           GraphRewriting.Layout.SpringEmbedder
 import           GraphRewriting.Layout.Wrapper as Layout
 import           GraphRewriting.Pattern
+import           GraphRewriting.Pattern.InteractionNet
 import           GraphRewriting.Rule
 import           GraphRewriting.Strategies.Control
                                                as Control
@@ -33,9 +34,8 @@ import           Language.Generic.Node
 import           Language.Generic.Rules
 import           Language.Monad.GL
 import           Language.Monad.Rules
-
--- TODO
-import           GraphRewriting.Pattern.InteractionNet
+import           System.Random
+import           System.Random.Shuffle
 
 instance Render n => Render (Layout.Wrapper n) where
   render = render . wrappee
@@ -80,11 +80,14 @@ incIndex n (i : is) = i : incIndex (n - 1) is
 incIndex n []       = 0 : incIndex (n - 1) []
 
 -- from LambdaScope/GraphRewriting
-bench :: Graph NodeMS -> IO ()
-bench term = do
+bench :: Bool -> Graph NodeMS -> IO ()
+bench random term = do
   (_, _) <- UI.initialise
   let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeMS) term
-  let indices = evalGraph (benchmark $ toList (ruleTree @NodeMS))
+  rng <- newStdGen
+  let func | random    = benchmarkRandom rng
+           | otherwise = benchmark
+  let indices = evalGraph (func $ toList $ ruleTree @NodeMS)
                           (Control.wrapGraph hypergraph)
   let indexTable = foldl (flip incIndex) [] indices
   let (_, numTree) = mapAccumL (\(i : is) _ -> (is, i))
@@ -99,7 +102,6 @@ ruleTree
 ruleTree = Branch
   "All"
   [ Leaf "Duplicate" $ duplicate @m
-  , Leaf "Eliminate" $ eliminateDuplicator @m
   , Leaf "Annihilate" $ annihilate @m
   , Leaf "Erase" $ eraser @m
   , Leaf "Multiplexer" $ compileShare @m
