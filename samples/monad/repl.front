@@ -1,0 +1,10 @@
+repl = do (
+  x <- readInt <>
+  _ <- writeInt x
+  y <- readInt <>
+  _ <- writeInt y
+  _ <- writeInt (add x y !)
+  repl
+)
+
+repl

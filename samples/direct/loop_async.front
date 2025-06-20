@@ -1,0 +1,14 @@
+-- this will prioritize the initial iterations
+--  but in random reduction, any iteration may be executed out of order
+
+loop start end f = if (equal start end !)
+	then <>
+	else (
+		f start !
+		loop (succ start) end f !
+	)
+
+loop 0 10 [
+	x = mul $0 42
+	writeInt x
+]

@@ -1,0 +1,10 @@
+repl = (
+  x = readInt <>
+  writeInt x
+  y = readInt <>
+  writeInt y
+  writeInt (add x y !)
+  repl
+)
+
+repl

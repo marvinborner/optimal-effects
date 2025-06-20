@@ -1,0 +1,3 @@
+if (equal (readInt <>) 42)
+  then (writeInt 1)
+  else (writeInt 0)
