@@ -65,7 +65,7 @@ transform = \case
       put $ ctx { stk = reverse (n : params) ++ s }
       b <- transform body
       let wrapped = wrap (length params) b -- +1 by L.rec
-      let rec     = L.rec wrapped (unwrapClosure c rec)
+      let rec     = L.rec wrapped $ unwrapClosure (reverse c) rec
       put $ ctx { stk = n : s, clo = rec : c }
       d <- transform next
       put $ ctx { stk = s, clo = c }
