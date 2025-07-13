@@ -70,6 +70,7 @@ ifElseSync = do
   true   <- lexemeN singleton
   _      <- symbol "else"
   false  <- lexeme singleton
+  -- TODO: this does not shift the de Bruijn indices! :-(
   return $ App (If clause (Abs "_" true) (Abs "_" false)) UnitV
 
 -- | asynchronous if expression: if! (<term>) then <term> else <term>

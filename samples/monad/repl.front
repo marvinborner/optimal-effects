@@ -4,7 +4,8 @@ repl = do (
   y <- readInt <>
   _ <- writeInt y
   _ <- writeInt (add x y !)
-  repl
+  rec <- repl
+  rec
 )
 
 repl

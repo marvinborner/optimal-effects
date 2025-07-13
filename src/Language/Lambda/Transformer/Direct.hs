@@ -83,7 +83,7 @@ compile node edge conn = para $ \case
     return $ (ctx1 <> ctx2) { port = o }
   L.Idx i -> do
     o <- edge
-    return $ Context { port = o, bindings = [(i, o)] }
+    return Context { port = o, bindings = [(i, o)] }
   L.Rec (_, f) (rec, _) -> do
     -- since f must always be an abstraction, we let the application to rec interact immediately
     -- this way, we don't end in endless recursion when the rec always gets unwrapped by the token
@@ -96,12 +96,12 @@ compile node edge conn = para $ \case
     return $ ctx { bindings = bs', port = p }
   L.Act n a -> do
     o <- edge
-    node $ Actor { inp = o, name = n, arity = a, args = [] }
-    return $ Context { port = o, bindings = [] }
+    node Actor { inp = o, name = n, arity = a, args = [] }
+    return Context { port = o, bindings = [] }
   L.Dat d -> do
     o <- edge
-    node $ Data { inp = o, dat = d }
-    return $ Context { port = o, bindings = [] }
+    node Data { inp = o, dat = d }
+    return Context { port = o, bindings = [] }
   _ -> error "invalid term"
 
 -- | create multiplexer of all =0 bindings

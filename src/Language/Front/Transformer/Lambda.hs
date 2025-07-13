@@ -106,7 +106,7 @@ transform = \case
   Act a n         -> return $ L.act a n
   Token           -> return L.tok
 
-  -- TODO: rec closure
+  -- TODO: rec closure?
   Do (Bind v t n) -> do
     ctx@(Context { stk = s }) <- get
     t'                        <- transform t

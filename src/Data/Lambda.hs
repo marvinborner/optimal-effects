@@ -59,31 +59,36 @@ instance {-# OVERLAPPING #-} Show Term where
 para :: Functor f => (f (Fix f, a) -> a) -> Fix f -> a
 para f (Fix fx) = f (fmap (\x -> (x, para f x)) fx)
 
+-- (1) why isn't (..) in prelude?
+-- (2) why can't I define (..)?
+-- oh well ..
+f ..! g = \x y -> f (g x y)
+
 lam :: Term -> Term
-lam body = Fix $ Lam body
+lam = Fix . Lam
 
 app :: Term -> Term -> Term
-app func arg = Fix $ App func arg
+app = Fix ..! App
 
 idx :: Int -> Term
-idx n = Fix $ Idx n
+idx = Fix . Idx
 
 -- | an application to an implicit abstraction but to a boxed term with its closure
 -- | Rec a b === Abb (Abs a) <b>
 rec :: Term -> Term -> Term
-rec t c = Fix $ Rec t c
+rec = Fix ..! Rec
 
 act :: T.Text -> Int -> Term
-act name arity = Fix $ Act name arity
+act = Fix ..! Act
 
 dat :: EffectData -> Term
-dat d = Fix $ Dat d
+dat = Fix . Dat
 
 bnd :: Term -> Term -> Term
-bnd term next = Fix $ Bnd term next
+bnd = Fix ..! Bnd
 
 eta :: Term -> Term
-eta t = Fix $ Eta t
+eta = Fix . Eta
 
 tok :: Term
 tok = Fix Tok

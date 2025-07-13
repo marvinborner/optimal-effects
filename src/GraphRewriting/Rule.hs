@@ -13,8 +13,6 @@ import           Control.Applicative
 import           Control.Monad.Reader
 import           Control.Monad.State
 import           Data.List                      ( nub )
-import           Debug.Trace
-import           Debug.Trace
 import           GraphRewriting.Graph.Read
 import           GraphRewriting.Graph.Write
 import           GraphRewriting.Pattern
@@ -165,7 +163,8 @@ benchmarkRandom rng rules = rec rng where
     contractions <- evalPattern (anyOf shuffled) <$> ask
     case contractions of
       []          -> return []
-      (i, rw) : _ -> trace (show i) $ fmap (i :) (rw >> rec (fst $ split rng))
+      -- (i, rw) : _ -> trace (show i) $ fmap (i :) (rw >> rec (fst $ split rng))
+      (i, rw) : _ -> fmap (i :) (rw >> rec (fst $ split rng))
 
   indexedRules = zipWith addIndex [0 ..] rules
    where

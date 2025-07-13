@@ -69,7 +69,7 @@ visualize term = do
   (_, _) <- UI.initialise
   let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeDS) term
   let layoutGraph = Layout.wrapGraph hypergraph
-  UI.run 50 id layoutStep layoutGraph (ruleTree @NodeDS)
+  UI.run 50 id layoutStep layoutGraph $ ruleTree @NodeDS
 
 -- from LambdaScope/GraphRewriting
 incIndex :: Int -> [Int] -> [Int]

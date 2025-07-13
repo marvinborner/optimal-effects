@@ -1,0 +1,9 @@
+-- sequentialization by data dependencies
+
+x = add 1 2 !
+
+res = if! (equal x 3 !)
+  then 42
+  else 0
+
+writeInt res !

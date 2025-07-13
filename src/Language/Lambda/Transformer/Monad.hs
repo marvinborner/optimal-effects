@@ -95,8 +95,8 @@ compile node edge conn = para $ \case
     return Context { port = o, bindings = [] }
   L.Dat d -> do
     o <- edge
-    node $ Data { inp = o, dat = d }
-    return $ Context { port = o, bindings = [] }
+    node Data { inp = o, dat = d }
+    return Context { port = o, bindings = [] }
   L.Bnd (_, t) (_, n) -> do
     ctxT@(Context { bindings = bsT, port = pT }) <- t
     ctxN@(Context { bindings = bsN, port = pN }) <- n
@@ -125,4 +125,4 @@ executeRecursor boxed o = replace $ do
   tok                    <- byEdge
   (Context { port = p }) <- compile byNode byEdge byWire boxed
   byWire p tok
-  byNode Token { inp = tok, out = o }
+  byNode Token { inp = o, out = tok }

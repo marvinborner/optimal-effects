@@ -91,4 +91,5 @@ executeActor "div" [NumberData b, NumberData a] p = replace $ do
     tok
     (NumberData $ a `div` b)
   byNode $ gToken @m p tok
-executeActor _ _ _ = error "invalid action"
+executeActor n args _ =
+  error $ "invalid action " <> show n <> ": " <> show args
