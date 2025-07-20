@@ -30,5 +30,5 @@ do (
 		)
 	)
 
-	writeInt (if (equal res1 res2 !) then 1 else 0)
+	writeInt (if (isEqual res1 res2 !) then 1 else 0)
 )

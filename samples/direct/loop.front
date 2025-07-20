@@ -1,4 +1,4 @@
-let loop start end f = if (equal start end)
+let loop start end f = if (isEqual start end)
 	then <>
 	else (
 		f start

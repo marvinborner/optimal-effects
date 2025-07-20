@@ -1,7 +1,7 @@
 -- this will prioritize the initial iterations
 --  but in random reduction, any iteration may be executed out of order
 
-let loop start end f = if (equal start end !)
+let loop start end f = if (isEqual start end !)
 	then <>
 	else (
 		f start !

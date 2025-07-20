@@ -3,7 +3,7 @@
 -- lazy Fix by T6
 let why = [[$0 [[$0 $1 $1]] $0] [[$2 [$0 $2 $1 [$0 $3]]]]]
 
-let fac f n = (if! (equal n 0 !) then [1] else (
+let fac f n = (if! (isEqual n 0 !) then [1] else (
   writeInt n
   [mul n (f $0 (pred n !)) !]
 )) [$0]
