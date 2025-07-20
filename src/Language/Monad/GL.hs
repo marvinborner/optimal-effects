@@ -8,6 +8,7 @@ module Language.Monad.GL
   () where
 
 import           Data.Effects                   ( EffectData(..) )
+import           Data.Lambda                    ( ForkType(..) )
 import           Data.Monad
 import qualified Data.Text                     as T
 import           GraphRewriting.GL.Render
@@ -30,6 +31,7 @@ instance PortSpec NodeMS where
           Token{}       -> [sd n, sd s]
           Data{}        -> [sd n]
           Multiplexer{} -> [sd n, sd s]
+          Fork{}        -> triangle
           BindN{}       -> triangle
           UnitN{}       -> [sd n, sd s]
    where
@@ -72,6 +74,9 @@ renderNode node = drawPorts node >> case node of
   Data { dat = StringData s }    -> drawNodeCircle $ "D=" <> s
   Data { dat = NumberData n }    -> drawNodeCircle $ "D=" <> show n
   Multiplexer{}                  -> drawNodeCircle "M"
+  Fork { exec = False }          -> drawNode "frk"
+  Fork { tpe = Conjunctive }     -> drawNode "con"
+  Fork { tpe = Disjunctive }     -> drawNode "dis"
   BindN{}                        -> drawNode ">>="
   UnitN{}                        -> drawNode "<>"
 

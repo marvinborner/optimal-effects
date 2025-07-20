@@ -12,13 +12,16 @@ module Data.Direct
 
 import           Data.Effects                   ( EffectData )
 import qualified Data.Lambda                   as Lambda
-                                                ( Term )
+                                                ( ForkType(..)
+                                                , Term
+                                                )
 import qualified Data.Text                     as T
 import           Data.View
 import           GraphRewriting.Graph.Types
 import           GraphRewriting.Layout.Wrapper as Layout
 import           GraphRewriting.Pattern.InteractionNet
 import           GraphRewriting.Rule
+import           GraphRewriting.Strategies.LeftmostOutermost
 import           Language.Generic.Node
 
 data AppDir = Top | BottomLeft | BottomRight
@@ -35,6 +38,7 @@ data NodeDS
         | ActorC      {inp, cur :: Port, name :: T.Text, arity :: Int, args :: [EffectData]}
         | Recursor    {inp :: Port, boxed :: Lambda.Term }
         | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
+        | Fork        {tpe :: Lambda.ForkType, inp, lhs, rhs :: Port, exec :: Bool}
         | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
 
 instance Eq NodeDS where
@@ -57,6 +61,7 @@ instance View [Port] NodeDS where
     Redirector { portA = a, portB = b, portC = c } -> [a, b, c]
     Token { inp = i, out = o }                     -> [i, o]
     Data { inp = i }                               -> [i]
+    Fork { inp = i, lhs = l, rhs = r }             -> [i, l, r]
   update ports node = case node of
     Initiator{}  -> node { out = o } where [o] = ports
     Abstractor{} -> node { inp = i, body = b, var = v }
@@ -72,6 +77,7 @@ instance View [Port] NodeDS where
       where [a, b, c] = ports
     Token{} -> node { inp = i, out = o } where [i, o] = ports
     Data{}  -> node { inp = i } where [i] = ports
+    Fork{}  -> node { inp = i, lhs = l, rhs = r } where [i, l, r] = ports
 
 instance INet NodeDS where
   principalPort = pp
@@ -92,6 +98,31 @@ pp node = case node of
   Redirector { portC = c, direction = BottomLeft } -> c
   Token { inp = i }                            -> i
   Data { inp = i }                             -> i
+  Fork { inp = i, exec = False }               -> i
+  Fork { lhs = l, exec = True }                -> l -- rhs implicit
+
+instance LeftmostOutermost NodeDS where
+  lmoPort = lmo
+
+lmo :: NodeDS -> Maybe Port
+lmo node = case node of
+  Initiator { out = o }                        -> Just o
+  Abstractor { inp = i, body = b, var = v }    -> Nothing -- !?
+  Eraser { inp = i }                           -> Just i
+  Duplicator { inp = i, out1 = o1, out2 = o2 } -> Just i
+  Multiplexer { out = o, ins = is }            -> Just o -- ???
+  Actor { inp = i }                            -> Just i -- ???
+  ActorC { inp = i }                           -> Just i -- ???
+  Recursor { inp = i }                         -> Just i
+  Redirector { portA = a, direction = Top }    -> Just a
+  Redirector { portB = b, direction = BottomRight } -> Just b
+  Redirector { portC = c, direction = BottomLeft } -> Just c
+  Token { out = i }                            -> Just i
+  Data { inp = i }                             -> Nothing -- ?
+  -- Constant { inp = i, args = as }              -> Nothing
+  -- Delimiter { inp = i, out = o }               -> Just i
+  -- Case { inp = i, out = o, alts = as }         -> Just o
+  -- Operator { lmop = i, ops = os }              -> Just $ inspect node !! i
 
 instance GenericNode NodeDS where
   gInitiator  = Initiator
@@ -106,6 +137,7 @@ instance GenericNode NodeDS where
   gActorC      = ActorC
   gRecursor    = Recursor
   gData        = Data
+  gFork        = Fork
 
   gpp          = pp
 
@@ -132,3 +164,5 @@ instance GenericNode NodeDS where
   isRecursor _          = False
   isData Data{} = True
   isData _      = False
+  isFork Fork{} = True
+  isFork _      = False

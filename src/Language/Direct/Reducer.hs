@@ -86,13 +86,28 @@ bench random term = do
   rng <- newStdGen
   let func | random    = benchmarkRandom rng
            | otherwise = benchmark
-  let indices = evalGraph (func $ toList $ ruleTree @NodeDS)
-                          (Control.wrapGraph hypergraph)
+  -- let tree       = lmoTree $ ruleTree @NodeDS
+  let tree       = ruleTree @NodeDS
+  let indices = evalGraph (func $ toList $ tree) (Control.wrapGraph hypergraph)
   let indexTable = foldl (flip incIndex) [] indices
-  let (_, numTree) = mapAccumL (\(i : is) _ -> (is, i))
-                               (indexTable ++ repeat 0)
-                               (ruleTree @NodeDS @(Control.Wrapper NodeDS))
+  let (_, numTree) =
+        mapAccumL (\(i : is) _ -> (is, i)) (indexTable ++ repeat 0) tree
+                               -- (ruleTree @NodeDS @(Control.Wrapper NodeDS))
   putStrLn $ showLabelledTree 2 0 (+) numTree
+
+-- lmoTree
+--   :: (LeftmostOutermost n, View [Port] n, View Control n)
+--   => LabelledTree (Rule n)
+--   -> LabelledTree (Rule n)
+-- lmoTree = appendRule moveControl . mapRules leftmostOutermost
+--  where
+--   mapRules :: (n -> m) -> LabelledTree n -> LabelledTree m
+--   mapRules f (Leaf   n r ) = Leaf n $ f r
+--   mapRules f (Branch n rs) = Branch n $ map (mapRules f) rs
+
+--   appendRule :: n -> LabelledTree n -> LabelledTree n
+--   appendRule r l@(Leaf   n rr) = Branch n [l, Leaf "Move Control" r]
+--   appendRule r (  Branch n rs) = Branch n $ rs ++ [Leaf "Move Control" r]
 
 ruleTree
   :: forall m n
@@ -116,6 +131,10 @@ ruleTree = Branch
     "Effectful"
     [ Leaf "Apply Actor"                    applyActor
     , Leaf "Apply Recursor"                 applyRecursor
+    , Leaf "Execute Conjunctive Fork"       execConjunctive
+    , Leaf "Execute Disjunctive Fork"       execDisjunctive
+    , Leaf "Return Conjunctive Fork"        returnConjunctive
+    , Leaf "Return Disjunctive Fork"        returnDisjunctive
     , Leaf "Initialize Partial Application" initializeDataPartial
     , Leaf "Apply Partially"                applyDataPartial
     ]

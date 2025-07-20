@@ -115,6 +115,10 @@ ruleTree = Branch
     "Effectful"
     [ Leaf "Apply Actor"                    applyActor
     , Leaf "Apply Recursor"                 applyRecursor
+    , Leaf "Execute Conjunctive Fork"       execConjunctive
+    , Leaf "Execute Disjunctive Fork"       execDisjunctive
+    , Leaf "Return Conjunctive Fork"        returnConjunctive
+    , Leaf "Return Disjunctive Fork"        returnDisjunctive
     , Leaf "Initialize Partial Application" initializeDataPartial
     , Leaf "Apply Partially"                applyDataPartial
     ]

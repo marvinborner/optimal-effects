@@ -8,6 +8,7 @@ module Language.Front.Parser
 
 import           Control.Monad                  ( void )
 import           Data.Front                     ( Action(..)
+                                                , ForkType(..)
                                                 , Identifier
                                                 , Term(..)
                                                 )
@@ -15,6 +16,9 @@ import           Data.Functor                   ( ($>) )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Void
+import           Language.Generic.Effects       ( actionArity
+                                                , builtinActions
+                                                )
 import           Text.Megaparsec         hiding ( token )
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
@@ -64,7 +68,7 @@ identifier = T.pack <$> some (alphaNumChar <|> upperChar <|> char '_')
 -- | synchronous if expression: if (<term>) then <term> else <term>
 ifElseSync :: Parser Term
 ifElseSync = do
-  _      <- symbol "if"
+  _      <- symbol "if "
   clause <- lexemeN $ parens term
   _      <- symbol "then"
   true   <- lexemeN singleton
@@ -76,13 +80,24 @@ ifElseSync = do
 -- | asynchronous if expression: if! (<term>) then <term> else <term>
 ifElseAsync :: Parser Term
 ifElseAsync = do
-  _      <- symbol "if!"
+  _      <- symbol "if! "
   clause <- lexemeN $ parens term
   _      <- symbol "then"
   true   <- lexemeN singleton
   _      <- symbol "else"
   false  <- lexeme singleton
   return $ If clause true false
+
+-- | fork with multiple branches: <join|race> (<branch1>) .. (<branchN>)
+-- | folded directly into right-associative binary forks
+fork :: Parser Term
+fork = do
+  forkType <- conjunctive <|> disjunctive
+  branches <- some $ lexemeN $ parens term
+  return $ foldr1 forkType branches
+ where
+  conjunctive = symbolN "join" *> pure (Fork Conjunctive)
+  disjunctive = symbolN "race" *> pure (Fork Disjunctive)
 
 -- | do action: bind | unit
 -- | bind: <identifier> <- <term>
@@ -105,13 +120,17 @@ doAction = try bind <|> try unit <|> prim
 -- | do block: do ( <doAction>+ )
 doBlock :: Parser Term
 doBlock = do
-  _      <- symbol "do"
+  _      <- lexeme "do "
   action <- lexeme $ parens $ doAction -- TODO
   return $ Do action
 
 -- | single decimal number
 number :: Parser Term
 number = Num <$> lexeme L.decimal
+
+-- | quoted string
+stringt :: Parser Term
+stringt = Str <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
 -- | Unit value
 unitV :: Parser Term
@@ -128,33 +147,10 @@ anonymous = Abs "_" <$> absed block
 deBruijn :: Parser Term
 deBruijn = Idx <$> lexeme (char '$' *> L.decimal)
 
--- | arity of action (TODO: even more temporary)
-actionArity :: Text -> Int
-actionArity "readInt"  = 1
-actionArity "writeInt" = 1
-actionArity "equal"    = 2
-actionArity "succ"     = 1
-actionArity "add"      = 2
-actionArity "pred"     = 1
-actionArity "sub"      = 2
-actionArity "mul"      = 2
-actionArity "div"      = 2
-actionArity _          = -1
-
--- | side effect (TODO: temporary!)
+-- | effectful term
 action :: Parser Term
 action =
-  (\x -> Act x (actionArity x))
-    <$> (   symbol "readInt"
-        <|> symbol "writeInt"
-        <|> symbol "equal"
-        <|> symbol "succ"
-        <|> symbol "add"
-        <|> symbol "pred"
-        <|> symbol "sub"
-        <|> symbol "mul"
-        <|> symbol "div"
-        )
+  (\x -> Act x (actionArity x)) <$> (foldl1 (<|>) (symbol <$> builtinActions))
 
 token :: Parser Term
 token = symbol "!" >> pure Token
@@ -163,8 +159,10 @@ singleton :: Parser Term
 singleton =
   ifElseAsync
     <|> ifElseSync
+    <|> fork
     <|> doBlock
     <|> deBruijn
+    <|> stringt
     <|> number
     <|> unitV
     <|> try action
@@ -184,9 +182,10 @@ toplevelTerm = do
   t <- term
   try (Def "_" [] t <$> block) <|> return t
 
--- | single definition: <identifier> <identifier>* = <term>
+-- | single definition: let <identifier> <identifier>* = <term>
 definition :: Parser Term
 definition = do
+  _      <- lexeme "let "
   name   <- lexeme identifier
   params <- many $ lexeme identifier
   _      <- symbolN "="

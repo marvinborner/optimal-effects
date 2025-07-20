@@ -7,7 +7,9 @@ module Language.Generic.Node
 
 import           Data.Effects                   ( EffectData )
 import qualified Data.Lambda                   as Lambda
-                                                ( Term )
+                                                ( ForkType
+                                                , Term
+                                                )
 import qualified Data.Text                     as T
 import           Data.View
 import           GraphRewriting.Graph.Types
@@ -25,6 +27,7 @@ class (Eq n, INet n, View [Port] n) => GenericNode n where
   gActorC      :: Port -> Port -> T.Text -> Int -> [EffectData] -> n
   gRecursor    :: Port -> Lambda.Term -> n
   gData        :: Port -> EffectData -> n
+  gFork        :: Lambda.ForkType -> Port -> Port -> Port -> Bool -> n
 
   gpp :: n -> Port
 
@@ -39,3 +42,6 @@ class (Eq n, INet n, View [Port] n) => GenericNode n where
   isActorC :: n -> Bool
   isRecursor :: n -> Bool
   isData :: n -> Bool
+  isFork :: n -> Bool
+  isConjunctive :: n -> Bool
+  isDisjunctive :: n -> Bool

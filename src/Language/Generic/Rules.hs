@@ -21,6 +21,8 @@ import           GraphRewriting.Pattern.InteractionNet
 import           GraphRewriting.Rule
 import           Language.Generic.Node
 
+import           Debug.Trace
+
 -- compileShare :: (View [Port] n, View NodeMS n) => Rule n
 compileShare
   :: forall m n . (GenericNode m, View [Port] n, View m n) => Rule n
@@ -90,6 +92,8 @@ annihilate :: forall m n . (GenericNode m, View [Port] n, View m n) => Rule n
 annihilate = do
   n1 :-: n2 <- activePair
   require $ n1 == n2
+  attached <- liftReader . flip adverseNodes (gpp @m n1) =<< previous
+  require $ length attached == 1 -- in order to prevent anns over multiplexed (e.g. disj fork)
   let aux1 = gpp @m n1 `delete` inspect n1
   let aux2 = gpp @m n2 `delete` inspect n2
   rewire $ [ [a1, a2] | (a1, a2) <- aux1 `zip` aux2 ]

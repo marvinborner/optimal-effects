@@ -8,6 +8,7 @@ module Language.Front.Transformer.Lambda
 import           Control.Monad.Except
 import           Control.Monad.State
 import           Data.Effects
+import           Data.Fix
 import           Data.Front
 import qualified Data.Lambda                   as L
 import           Data.List                      ( elemIndex )
@@ -24,6 +25,7 @@ data Context = Context
 type TransM = ExceptT String (State Context)
 
 -- | True if n is used recursively in body
+-- TODO: this should be done with a simple fv check
 isRecursive :: Identifier -> Term -> Bool
 isRecursive n = \case
   Def n' params body next
@@ -39,6 +41,7 @@ isRecursive n = \case
   App a b      -> isRecursive n a || isRecursive n b
   UnitV        -> False
   Num _        -> False
+  Str _        -> False
   Act _ _      -> False
   Token        -> False
   Idx _        -> False -- hmm
@@ -46,7 +49,8 @@ isRecursive n = \case
   Do  (Unit t) -> isRecursive n t
   Do (Bind n' t a) | n == n'   -> isRecursive n t
                    | otherwise -> isRecursive n t || isRecursive n (Do a)
-  e -> error $ show e
+  Fork _ a b -> isRecursive n a || isRecursive n b
+  e          -> error $ show e
 
 -- | Wraps term in n abstractions
 wrap :: Int -> L.Term -> L.Term
@@ -55,7 +59,16 @@ wrap n t = L.lam $ wrap (n - 1) t
 
 unwrapClosure :: [L.Term] -> L.Term -> L.Term
 unwrapClosure []      term = term
-unwrapClosure (t : c) term = L.app (L.lam (unwrapClosure c term)) t
+unwrapClosure (t : c) term = L.app (L.lam $ unwrapClosure c term) t
+
+shift :: Int -> L.Term -> L.Term
+shift n = go 0
+ where
+  go d = L.para $ \case
+    L.Idx i | i >= d    -> L.idx $ i + n
+            | otherwise -> L.idx $ i
+    L.Lam (t, _) -> L.lam $ go (d + 1) t
+    t            -> Fix $ fmap snd t
 
 transform :: Term -> TransM L.Term
 transform = \case
@@ -88,7 +101,12 @@ transform = \case
     (Context { stk = s }) <- get
     let maybeIdx = elemIndex n s
     case maybeIdx of
-      Nothing  -> throwError $ "Identifier not found: " <> T.unpack n <> show s
+      Nothing ->
+        throwError
+          $  "Identifier not found: "
+          <> T.unpack n
+          <> ", stack: "
+          <> show s
       Just idx -> return $ L.idx idx
   Idx n   -> return $ L.idx n -- TODO: verify closedness in stack
   Abs n t -> do -- these do not support recursion (typically anonymous)
@@ -101,13 +119,17 @@ transform = \case
     a' <- transform a
     b' <- transform b
     return $ L.app a' b'
-  Num n           -> return $ L.dat $ NumberData n
-  UnitV           -> return $ L.dat UnitData
-  Act a n         -> return $ L.act a n
-  Token           -> return L.tok
+  Num n                -> return $ L.dat $ NumberData n
+  Str s                -> return $ L.dat $ StringData s
+  UnitV                -> return $ L.dat UnitData
+  Act a n              -> return $ L.act a n
+  Token                -> return L.tok
+
+  Fork Conjunctive a b -> L.frk L.Conjunctive <$> transform a <*> transform b
+  Fork Disjunctive a b -> L.frk L.Disjunctive <$> transform a <*> transform b
 
   -- TODO: rec closure?
-  Do (Bind v t n) -> do
+  Do (Bind v t n)      -> do
     ctx@(Context { stk = s }) <- get
     t'                        <- transform t
     put $ ctx { stk = v : s }

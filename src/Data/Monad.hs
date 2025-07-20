@@ -11,7 +11,9 @@ module Data.Monad
 
 import           Data.Effects                   ( EffectData )
 import qualified Data.Lambda                   as Lambda
-                                                ( Term )
+                                                ( ForkType(..)
+                                                , Term
+                                                )
 import qualified Data.Text                     as T
 import           Data.View
 import           GraphRewriting.Graph.Types
@@ -33,6 +35,7 @@ data NodeMS
         | ActorC      {inp, cur :: Port, name :: T.Text, arity :: Int, args :: [EffectData]}
         | Recursor    {inp :: Port, boxed :: Lambda.Term }
         | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
+        | Fork        {tpe :: Lambda.ForkType, inp, lhs, rhs :: Port, exec :: Bool}
         | BindN       {inp, arg, var :: Port, exec :: Bool}
         | UnitN       {inp, out :: Port}
 
@@ -56,6 +59,7 @@ instance View [Port] NodeMS where
     Recursor { inp = i }                         -> [i]
     Token { inp = i, out = o }                   -> [i, o]
     Data { inp = i }                             -> [i]
+    Fork { inp = i, lhs = l, rhs = r }           -> [i, l, r]
     BindN { inp = i, arg = a, var = v }          -> [i, a, v]
     UnitN { inp = i, out = o }                   -> [i, o]
   update ports node = case node of
@@ -73,6 +77,7 @@ instance View [Port] NodeMS where
     Recursor{}    -> node { inp = i } where [i] = ports
     Token{}       -> node { inp = i, out = o } where [i, o] = ports
     Data{}        -> node { inp = i } where [i] = ports
+    Fork{}        -> node { inp = i, lhs = l, rhs = r } where [i, l, r] = ports
     BindN{}       -> node { inp = i, arg = a, var = v } where [i, a, v] = ports
     UnitN{}       -> node { inp = i, out = o } where [i, o] = ports
 
@@ -93,6 +98,8 @@ pp node = case node of
   Recursor { inp = i }                         -> i
   Token { inp = i }                            -> i
   Data { inp = i }                             -> i
+  Fork { inp = i, exec = False }               -> i
+  Fork { lhs = l, exec = True }                -> l -- rhs implicit
   BindN { inp = i, exec = False }              -> i
   BindN { arg = a, exec = True }               -> a
   UnitN { inp = i }                            -> i
@@ -109,6 +116,7 @@ instance GenericNode NodeMS where
   gActorC      = ActorC
   gRecursor    = Recursor
   gData        = Data
+  gFork        = Fork
 
   gpp          = pp
 
@@ -135,3 +143,5 @@ instance GenericNode NodeMS where
   isRecursor _          = False
   isData Data{} = True
   isData _      = False
+  isFork Fork{} = True
+  isFork _      = False

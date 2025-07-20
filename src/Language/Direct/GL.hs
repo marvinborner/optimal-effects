@@ -9,6 +9,7 @@ module Language.Direct.GL
 
 import           Data.Direct
 import           Data.Effects                   ( EffectData(..) )
+import           Data.Lambda                    ( ForkType(..) )
 import qualified Data.Text                     as T
 import           GraphRewriting.GL.Render
 import           GraphRewriting.Layout.PortSpec
@@ -29,6 +30,7 @@ instance PortSpec NodeDS where
           Recursor{}    -> [sd n]
           Token{}       -> [sd n, sd s]
           Data{}        -> [sd n]
+          Fork{}        -> triangle
           Multiplexer{} -> [sd n, sd s]
    where
     n = Vector2 0 1
@@ -71,6 +73,9 @@ renderNode node = drawPorts node >> case node of
   Data { dat = UnitData }               -> drawNodeCircle "()"
   Data { dat = StringData s }           -> drawNodeCircle $ "D=" <> s
   Data { dat = NumberData n }           -> drawNodeCircle $ "D=" <> show n
+  Fork { exec = False }                 -> drawNode "frk"
+  Fork { tpe = Conjunctive }            -> drawNode "con"
+  Fork { tpe = Disjunctive }            -> drawNode "dis"
   Multiplexer{}                         -> drawNodeCircle "M"
 
 drawPorts :: NodeDS -> IO ()

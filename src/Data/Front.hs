@@ -3,6 +3,7 @@
 module Data.Front
   ( Term(..)
   , Action(..)
+  , ForkType(..)
   , Identifier
   ) where
 
@@ -14,6 +15,8 @@ type Identifier = Text
 
 data Action = Unit Term | Prim Term | Bind Identifier Term Action
 
+data ForkType = Conjunctive | Disjunctive
+
 instance Show Action where
   show (Unit t    ) = "(return " <> show t <> ")"
   show (Prim t    ) = show t
@@ -23,13 +26,14 @@ instance Show Action where
 data Term = Def Identifier [Identifier] Term Term
           | Rec Identifier Term Term -- only used temporarily in compilation phase
           | If Term Term Term
+          | Fork ForkType Term Term
           | Var Identifier
           | Idx Int
           | App Term Term
           | Abs Identifier Term
           | Num Int
+          | Str String
           | UnitV
-          | Fork Term Term
           | Act Identifier Int
           | Do Action
           | Token
@@ -46,12 +50,15 @@ instance Show Term where
   show (Rec n rec body) = "REC(" <> T.unpack n <> ")"
   show (If clause true false) =
     "if (" <> show clause <> ") then " <> show true <> " else " <> show false
-  show (Var n  ) = T.unpack n
-  show (Idx n  ) = "$" <> show n
-  show (App a b) = "(" <> show a <> " " <> show b <> ")"
-  show (Abs n b) = "λ" <> T.unpack n <> "." <> show b
-  show (Num n  ) = show n
-  show (UnitV  ) = "<>"
-  show (Act n _) = T.unpack n
-  show (Do as  ) = "do (" <> show as <> ")"
-  show Token     = "!"
+  show (Fork Conjunctive a b) = "∧ (" <> show a <> ") (" <> show b <> ")"
+  show (Fork Disjunctive a b) = "∨ (" <> show a <> ") (" <> show b <> ")"
+  show (Var n               ) = T.unpack n
+  show (Idx n               ) = "$" <> show n
+  show (App a b             ) = "(" <> show a <> " " <> show b <> ")"
+  show (Abs n b             ) = "λ" <> T.unpack n <> "." <> show b
+  show (Num n               ) = show n
+  show (Str s               ) = show s
+  show (UnitV               ) = "<>"
+  show (Act n _             ) = T.unpack n
+  show (Do as               ) = "do (" <> show as <> ")"
+  show Token                  = "!"

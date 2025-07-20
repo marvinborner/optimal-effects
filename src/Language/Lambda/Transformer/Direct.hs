@@ -102,6 +102,12 @@ compile node edge conn = para $ \case
     o <- edge
     node Data { inp = o, dat = d }
     return Context { port = o, bindings = [] }
+  L.Frk tpe (_, lhs) (_, rhs) -> do
+    o <- edge
+    (Context { bindings = bsL, port = pL }) <- lhs
+    (Context { bindings = bsR, port = pR }) <- rhs
+    node Fork { tpe = tpe, inp = o, lhs = pL, rhs = pR, exec = False }
+    return Context { port = o, bindings = bsL <> bsR }
   _ -> error "invalid term"
 
 -- | create multiplexer of all =0 bindings

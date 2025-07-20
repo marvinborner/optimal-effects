@@ -12,6 +12,8 @@ module Data.Lambda
   , bnd
   , eta
   , tok
+  , frk
+  , ForkType(..)
   , Term
   , TermF(..)
   , para
@@ -19,9 +21,14 @@ module Data.Lambda
   ) where
 
 import           Data.Effects                   ( EffectData )
-import           Data.Fix                       ( Fix(..) )
+import           Data.Fix                       ( Fix(..)
+                                                , cata
+                                                )
 import qualified Data.Text                     as T
 import           Text.Show.Deriving
+
+data ForkType = Conjunctive | Disjunctive
+  deriving Show
 
 data TermF t = Lam t
             | App t t
@@ -31,6 +38,7 @@ data TermF t = Lam t
             | Cot
             | Act T.Text Int
             | Dat EffectData
+            | Frk ForkType t t
             | Bnd t t
             | Eta t
             deriving Functor
@@ -45,6 +53,10 @@ instance Show t => Show (TermF t) where
   showsPrec _ (Rec t _) = showString "([" <> shows t <> showString "] BOX)"
   showsPrec _ (Act n _) = showString $ T.unpack n
   showsPrec _ (Dat d  ) = shows d
+  showsPrec _ (Frk Conjunctive a b) =
+    showString "∧ (" <> shows a <> showString ") (" <> shows b <> showString ")"
+  showsPrec _ (Frk Disjunctive a b) =
+    showString "∨ (" <> shows a <> showString ") (" <> shows b <> showString ")"
   showsPrec _ (Bnd t n) = shows t . showString " >>= " . shows n
   showsPrec _ (Eta t  ) = showString "(unit " . shows t . showString ")"
 
@@ -92,6 +104,9 @@ eta = Fix . Eta
 
 tok :: Term
 tok = Fix Tok
+
+frk :: ForkType -> Term -> Term -> Term
+frk tpe = Fix ..! Frk tpe
 
 unwrap :: Term -> TermF Term
 unwrap (Fix t) = t

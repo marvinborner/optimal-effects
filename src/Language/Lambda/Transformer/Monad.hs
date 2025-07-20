@@ -97,9 +97,15 @@ compile node edge conn = para $ \case
     o <- edge
     node Data { inp = o, dat = d }
     return Context { port = o, bindings = [] }
+  L.Frk tpe (_, lhs) (_, rhs) -> do
+    o <- edge
+    (Context { bindings = bsL, port = pL }) <- lhs
+    (Context { bindings = bsR, port = pR }) <- rhs
+    node Fork { tpe = tpe, inp = o, lhs = pL, rhs = pR, exec = False }
+    return Context { port = o, bindings = bsL <> bsR }
   L.Bnd (_, t) (_, n) -> do
-    ctxT@(Context { bindings = bsT, port = pT }) <- t
-    ctxN@(Context { bindings = bsN, port = pN }) <- n
+    (Context { bindings = bsT, port = pT }) <- t
+    (Context { bindings = bsN, port = pN }) <- n
     -- shifts are handled by abs (always immediate in n)
     o <- edge
     node BindN { inp = o, arg = pT, var = pN, exec = False }

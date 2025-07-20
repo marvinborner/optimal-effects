@@ -7,6 +7,7 @@ import           Control.Applicative            ( optional )
 import           Control.Monad
 import           Data.Direct
 import           Data.Effects
+import           Data.Lambda                    ( ForkType(..) )
 import           Data.List                      ( delete
                                                 , elemIndex
                                                 , transpose
@@ -61,6 +62,49 @@ redirectToken = do
       v <- byEdge
       byNode $ tok { inp = v, out = b }
       byNode $ red { portA = oT, portB = v, direction = Top }
+
+execConjunctive :: (View [Port] n, View NodeDS n) => Rule n
+execConjunctive = do
+  fork@(Fork { tpe = Conjunctive, inp = i, lhs = l, rhs = r, exec = False }) :-: tok@(Token { out = oT }) <-
+    activePair
+  replace $ do
+    tl <- byEdge
+    tr <- byEdge
+    byNode fork { inp = oT, lhs = tl, rhs = tr, exec = True }
+    byNode tok { inp = l, out = tl }
+    byNode tok { inp = r, out = tr }
+
+execDisjunctive :: (View [Port] n, View NodeDS n) => Rule n
+execDisjunctive = do
+  fork@(Fork { tpe = Disjunctive, inp = i, lhs = l, rhs = r, exec = False }) :-: tok@(Token { out = oT }) <-
+    activePair
+  replace $ do -- we do not connect the right port in order to have ambiguity
+    tl <- byEdge
+    byNode fork { inp = oT, lhs = tl, rhs = tl, exec = True }
+    byNode tok { inp = l, out = tl }
+    byNode tok { inp = r, out = tl }
+
+returnConjunctive :: (View [Port] n, View NodeDS n) => Rule n
+returnConjunctive = do
+  (Fork { tpe = Conjunctive, inp = i1, lhs = l1, rhs = r1, exec = True }) :-: tok1@(Token { inp = iT1, out = oT1 }) <-
+    activePair
+  (Token { inp = iT2, out = oT2 }) <- nodeWith r1
+  (Fork { tpe = Conjunctive, inp = i2, lhs = l2, rhs = r2, exec = True }) <-
+    nodeWith iT2
+  require $ oT1 /= oT2 && i1 == i2 && l1 == l2 && r1 == r2 -- same fork, different tokens
+
+  replace $ do
+    t <- byEdge
+    byNode Redirector { direction = Top, portA = t, portB = oT1, portC = oT2 }
+    byNode Token { inp = t, out = i1 }
+
+returnDisjunctive :: (View [Port] n, View NodeDS n) => Rule n
+returnDisjunctive = do
+  fork@(Fork { tpe = Disjunctive, inp = i, exec = True }) :-: tok@(Token { inp = iT, out = oT }) <-
+    activePair
+  replace $ do
+    byNode tok { inp = i, out = oT }
+    byNode Eraser { inp = iT }
 
 -- this is basically almost !reflectsToken
 hasActionPotential :: NodeDS -> Bool
