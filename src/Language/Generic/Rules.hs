@@ -23,7 +23,6 @@ import           Language.Generic.Node
 
 import           Debug.Trace
 
--- compileShare :: (View [Port] n, View NodeMS n) => Rule n
 compileShare
   :: forall m n . (GenericNode m, View [Port] n, View m n) => Rule n
 compileShare = do

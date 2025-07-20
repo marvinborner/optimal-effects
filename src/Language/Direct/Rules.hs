@@ -49,6 +49,8 @@ redirectToken :: (View [Port] n, View NodeDS n) => Rule n
 redirectToken = do
   red@(Redirector { portA = a, portB = b, portC = c, direction = r }) :-: tok@(Token { inp = iT, out = oT }) <-
     activePair
+  attached <- liftReader . flip adverseNodes iT =<< previous
+  require $ length attached == 1 -- in order to prevent reds over multiplexed (e.g. disj fork)
   case r of
     BottomRight -> replace $ do
       v <- byEdge -- tok-bl edge
@@ -95,7 +97,7 @@ returnConjunctive = do
 
   replace $ do
     t <- byEdge
-    byNode Redirector { direction = Top, portA = t, portB = oT1, portC = oT2 }
+    byNode Redirector { direction = Top, portA = oT1, portB = t, portC = oT2 }
     byNode Token { inp = t, out = i1 }
 
 returnDisjunctive :: (View [Port] n, View NodeDS n) => Rule n
@@ -110,6 +112,7 @@ returnDisjunctive = do
 hasActionPotential :: NodeDS -> Bool
 hasActionPotential (Redirector { direction = BottomRight }) = True
 hasActionPotential (Actor { arity = 0 }) = True
+hasActionPotential (Fork{}             ) = True
 hasActionPotential (Recursor{}         ) = True
 hasActionPotential (Data{}             ) = False -- Must be False or possible loops with T-App
 hasActionPotential _                     = False

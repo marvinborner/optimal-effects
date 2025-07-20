@@ -7,6 +7,9 @@ module Language.Front.Parser
   ) where
 
 import           Control.Monad                  ( void )
+import           Data.Effects                   ( actionArity
+                                                , builtinActions
+                                                )
 import           Data.Front                     ( Action(..)
                                                 , ForkType(..)
                                                 , Identifier
@@ -16,9 +19,6 @@ import           Data.Functor                   ( ($>) )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Void
-import           Language.Generic.Effects       ( actionArity
-                                                , builtinActions
-                                                )
 import           Text.Megaparsec         hiding ( token )
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
