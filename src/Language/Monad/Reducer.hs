@@ -37,6 +37,7 @@ import           Language.Monad.Rules
 import           System.Random
 import           System.Random.Shuffle
 
+-- from LambdaScope/GraphRewriting
 instance Render n => Render (Layout.Wrapper n) where
   render = render . wrappee
 instance PortSpec n => PortSpec (Control.Wrapper n) where
@@ -44,6 +45,7 @@ instance PortSpec n => PortSpec (Control.Wrapper n) where
 instance LeftmostOutermost n => LeftmostOutermost (Layout.Wrapper n) where
   lmoPort = lmoPort . wrappee
 
+-- from LambdaScope/GraphRewriting
 layoutStep
   :: (PortSpec n, View Position n, View Rotation n, View [Port] n)
   => Node
@@ -64,9 +66,9 @@ layoutStep n = do
   Unsafe.adjustNode n $ rot (* 0.9)
 
 -- | Visualize reduction to normal form
--- TODO: only app should use IO
-visualize :: Graph NodeMS -> IO ()
-visualize term = do
+-- from LambdaScope/GraphRewriting
+visualize :: Bool -> Bool -> Bool -> Graph NodeMS -> IO ()
+visualize _ _ _ term = do
   (_, _) <- UI.initialise
   let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeMS) term
   let layoutGraph = Layout.wrapGraph hypergraph
@@ -80,19 +82,20 @@ incIndex n (i : is) = i : incIndex (n - 1) is
 incIndex n []       = 0 : incIndex (n - 1) []
 
 -- from LambdaScope/GraphRewriting
-bench :: Bool -> Graph NodeMS -> IO ()
-bench random term = do
+bench :: Bool -> Bool -> Bool -> Graph NodeMS -> IO ()
+bench _ random parallel term = do
   (_, _) <- UI.initialise
   let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeMS) term
   rng <- newStdGen
   let func | random    = benchmarkRandom rng
            | otherwise = benchmark
-  let indices = evalGraph (func $ toList $ ruleTree @NodeMS)
-                          (Control.wrapGraph hypergraph)
+  let tree = ruleTree @NodeMS
+  let rules | parallel  = func (exhaustive <$> toList tree)
+            | otherwise = func $ toList tree
+  let indices    = evalGraph rules (Control.wrapGraph hypergraph)
   let indexTable = foldl (flip incIndex) [] indices
-  let (_, numTree) = mapAccumL (\(i : is) _ -> (is, i))
-                               (indexTable ++ repeat 0)
-                               (ruleTree @NodeMS @(Control.Wrapper NodeMS))
+  let (_, numTree) =
+        mapAccumL (\(i : is) _ -> (is, i)) (indexTable ++ repeat 0) tree
   putStrLn $ showLabelledTree 2 0 (+) numTree
 
 ruleTree

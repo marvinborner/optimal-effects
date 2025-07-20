@@ -12,12 +12,12 @@ rm -f "$OUT/*.check"
 for check in *.check; do
 	file=$(basename "$check" .check)
 
-	cat "$file.front" | opteff-exe -b -t direct >"$OUT/$file".check 2>/dev/null
+	cat "$file.front" | opteff-exe -bi -t direct >"$OUT/$file".check 2>/dev/null
 	cmp "$check" "$OUT/$file.check" && printf "$SUCC" || printf "$(diff --color "$check" "$OUT/$file.check")\n$FAIL"
 	echo "check cmp on $file"
 
 	for i in $(seq 1 10); do
-		cat "$file.front" | opteff-exe -r -t direct >"$OUT/$file".random.check 2>/dev/null
+		cat "$file.front" | opteff-exe -bir -t direct >"$OUT/$file".random.check 2>/dev/null
 		cmp "$check" "$OUT/$file.random.check" && printf "$SUCC" || printf "$FAIL"
 		echo "check random cmp on $file"
 	done

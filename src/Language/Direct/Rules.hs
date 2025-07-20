@@ -173,7 +173,7 @@ applyActor = do
   executeActor @NodeDS n a p
   -- exhaustive $ compileShare @NodeDS -- TODO!
 
-applyRecursor :: (View [Port] n, View NodeDS n) => Rule n
-applyRecursor = do
+applyRecursor :: (View [Port] n, View NodeDS n) => AppDir -> Rule n
+applyRecursor dir = do
   (Token { out = p, inp = i }) :-: (Recursor { boxed = t }) <- activePair
-  executeRecursor t p
+  executeRecursor dir t p

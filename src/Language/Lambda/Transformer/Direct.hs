@@ -28,10 +28,11 @@ instance Semigroup Context where
   ctx@(Context { bindings = bs1 }) <> (Context { bindings = bs2 }) =
     ctx { bindings = bs1 <> bs2 }
 
-transformDirect :: L.Term -> Either String (Graph NodeDS)
-transformDirect term = do
+transformDirect :: AppDir -> L.Term -> Either String (Graph NodeDS)
+transformDirect dir term = do
   let (bindings, graph) = flip runGraph emptyGraph $ do
-        context@(Context { port = n, bindings = bs }) <- compile newNode
+        context@(Context { port = n, bindings = bs }) <- compile dir
+                                                                 newNode
                                                                  newEdge
                                                                  mergeEdges
                                                                  term
@@ -49,12 +50,13 @@ transformDirect term = do
 -- TODO: translate token by app match
 compile
   :: Monad m
-  => (NodeDS -> m a1)
+  => AppDir
+  -> (NodeDS -> m a1)
   -> m Port
   -> (Port -> Port -> m a2)
   -> L.Term
   -> m Context
-compile node edge conn = para $ \case
+compile dir node edge conn = para $ \case
   L.Lam (_, t) -> do
     ctx@(Context { bindings = bs, port = p }) <- t
     o <- edge
@@ -75,11 +77,7 @@ compile node edge conn = para $ \case
     ctx1@(Context { port = pf }) <- f
     ctx2@(Context { port = pa }) <- a
     o                            <- edge
-    node Redirector { portA     = pf
-                    , portB     = o
-                    , portC     = pa
-                    , direction = BottomLeft
-                    }
+    node Redirector { portA = pf, portB = o, portC = pa, direction = dir }
     return $ (ctx1 <> ctx2) { port = o }
   L.Idx i -> do
     o <- edge
@@ -119,9 +117,10 @@ bindName node edge conn (Context { bindings = bs }) = do
   node Multiplexer { out = x, ins = bound }
   return x
 
-executeRecursor :: (View [Port] n, View NodeDS n) => L.Term -> Port -> Rule n
-executeRecursor boxed o = replace $ do
+executeRecursor
+  :: (View [Port] n, View NodeDS n) => AppDir -> L.Term -> Port -> Rule n
+executeRecursor dir boxed o = replace $ do
   tok                    <- byEdge
-  (Context { port = p }) <- compile byNode byEdge byWire boxed
+  (Context { port = p }) <- compile dir byNode byEdge byWire boxed
   byWire p tok
   byNode Token { inp = tok, out = o }
