@@ -1,5 +1,5 @@
 -- x >>= id
-join x = do (
+let join x = do (
 	a <- x
 	a
 )

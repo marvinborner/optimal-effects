@@ -1,4 +1,4 @@
-v = 42
+let v = 42
 do (
   res <- if (equal v 41 !) then (writeInt v) else (writeInt 0)
   writeInt v

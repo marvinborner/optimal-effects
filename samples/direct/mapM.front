@@ -1,14 +1,14 @@
 -- normally, actions are executed during construction of a list (e.g. with cons)
 -- by mapping, actions are underneath abstractions and will not get executed!
 
-nil = [[$0]]
-cons = [[[$0 $2 $1]]]
-fold f x lst = lst [[[fold f (f x $2) $1]]] x
+let nil = [[$0]]
+let cons = [[[$0 $2 $1]]]
+let fold f x lst = lst [[[fold f (f x $2) $1]]] x
 
-mapM_ f lst = lst [[[[mapM_ f $2] (f $2)]]] <>
+let mapM_ f lst = lst [[[[mapM_ f $2] (f $2)]]] <>
 
-list = [$0 1 [$0 2 [$0 3 [$0 4 [$0 5 nil]]]]]
-f x = (
+let list = [$0 1 [$0 2 [$0 3 [$0 4 [$0 5 nil]]]]]
+let f x = (
 	writeInt (readInt <>)
 	x
 )
@@ -19,13 +19,13 @@ f x = (
 -- 	go
 -- ) 0
 
-mapM f lst = lst [[[
-	y = f $2
-	ys = mapM f $2
+let mapM f lst = lst [[[
+	let y = f $2
+	let ys = mapM f $2
 	cons y ys
 ]]] nil
 
-writeInt (fold add 0 (mapM f infinite))
+writeInt (fold add 0 (mapM f list))
 
 -- or just: (uncomment other because we duplicate duplicators)
 -- mapM_ f list

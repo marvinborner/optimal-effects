@@ -1,9 +1,9 @@
 -- sequentialization by data dependencies
 
-x = add 1 2 !
+let x = add 1 2 !
 
-res = if! (equal x 3 !)
-  then 42
-  else 0
+let str = if (equal x 3 !)
+  then ("three!" !)
+  else ("hit by cosmic ray!" !)
 
-writeInt res !
+print str !

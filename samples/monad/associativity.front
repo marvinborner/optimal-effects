@@ -1,12 +1,12 @@
-m = do (return 10)
+let m = do (return 10)
 
 -- duplicating & printing p here requires bookkeeping!
-f p = do (
+let f p = do (
 	u1 <- writeInt 1
 	add p 5
 )
 
-g s = do (
+let g s = do (
 	u2 <- writeInt 2
 	mul s 3
 )

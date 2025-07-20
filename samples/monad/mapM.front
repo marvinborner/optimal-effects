@@ -1,12 +1,12 @@
-list = [$0 1 [$0 2 [$0 3 [$0 4 [$0 5 [[$0]]]]]]]
+let list = [$0 1 [$0 2 [$0 3 [$0 4 [$0 5 [[$0]]]]]]]
 
-mapM_ f lst = lst [[[do (
+let mapM_ f lst = lst [[[do (
 	_ <- f $2
 	rec <- mapM_
 	rec f $3
 )]]] (do (return <>))
 
-f x = do (
+let f x = do (
 	y <- readInt <>
 	s <- add x y
 	writeInt s

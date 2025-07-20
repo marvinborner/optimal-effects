@@ -1,4 +1,4 @@
-repl = do (
+let repl = do (
   x <- readInt <>
   _ <- writeInt x
   y <- readInt <>

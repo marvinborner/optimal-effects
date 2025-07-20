@@ -12,7 +12,7 @@ rm -f "$OUT/*.check"
 for check in *.check; do
 	file=$(basename "$check" .check)
 
-	cat "$file.front" | opteff-exe -r -t monad >"$OUT/$file".check 2>/dev/null
+	cat "$file.front" | opteff-exe -b -t monad >"$OUT/$file".check 2>/dev/null
 	cmp "$check" "$OUT/$file.check" && printf "$SUCC" || printf "$(diff --color "$check" "$OUT/$file.check")\n$FAIL"
 	echo "check cmp on $file"
 

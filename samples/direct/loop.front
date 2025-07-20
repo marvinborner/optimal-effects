@@ -1,4 +1,4 @@
-loop start end f = if (equal start end)
+let loop start end f = if (equal start end)
 	then <>
 	else (
 		f start
@@ -6,6 +6,6 @@ loop start end f = if (equal start end)
 	)
 
 loop 0 10 [
-	x = mul $0 42
+	let x = mul $0 42
 	writeInt x
 ]

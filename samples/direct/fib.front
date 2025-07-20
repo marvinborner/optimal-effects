@@ -1,4 +1,4 @@
-fib n = (
+let fib n = (
   if (equal n 0)
     then 0
     else if (equal n 1)

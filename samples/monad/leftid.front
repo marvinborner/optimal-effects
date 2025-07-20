@@ -1,6 +1,6 @@
-a = 42
+let a = 42
 
-f x = do (
+let f x = do (
 	u <- writeInt x
 	mul x 2
 )

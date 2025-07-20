@@ -1,4 +1,4 @@
-m = do (
+let m = do (
     u <- writeInt 100
     return 200
 )

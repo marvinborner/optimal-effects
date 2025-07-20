@@ -1,14 +1,14 @@
-fold f x lst = lst [[[fold f (f x $2) $1]]] x
+let fold f x lst = lst [[[fold f (f x $2) $1]]] x
 
-map f lst = lst [[[[$0 (f $3) (map f $2)]]]] [[$0]]
+let map f lst = lst [[[[$0 (f $3) (map f $2)]]]] [[$0]]
 
 -- direct construction, no effects possible since under abstraction
-list = [$0 1 [$0 2 [$0 3 [$0 4 [$0 5 [[$0]]]]]]]
-f x = mul x 2
+let list = [$0 1 [$0 2 [$0 3 [$0 4 [$0 5 [[$0]]]]]]]
+let f x = mul x 2
 writeInt (fold add 0 (map f list))
 
 -- construction by function, effects possible because of CbV
-nil = [[$0]]
-cons = [[[$0 $2 $1]]]
-list = cons (readInt <>) (cons (readInt <>) (cons (readInt <>) nil))
+let nil = [[$0]]
+let cons = [[[$0 $2 $1]]]
+let list = cons (readInt <>) (cons (readInt <>) (cons (readInt <>) nil))
 writeInt (fold add 0 list)

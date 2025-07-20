@@ -1,7 +1,7 @@
-repl = (
-  x = readInt <>
+let repl = (
+  let x = readInt <>
   writeInt x
-  y = readInt <>
+  let y = readInt <>
   writeInt y
   writeInt (add x y !)
   repl
