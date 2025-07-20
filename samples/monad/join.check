@@ -10,5 +10,9 @@ All 57
   Effectful 25
     Apply Actor 7
     Apply Recursor 0
+    Execute Conjunctive Fork 0
+    Execute Disjunctive Fork 0
+    Return Conjunctive Fork 0
+    Return Disjunctive Fork 0
     Initialize Partial Application 9
     Apply Partially 9

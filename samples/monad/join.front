@@ -1,18 +1,18 @@
 -- x >>= id
-let join x = do (
+let mjoin x = do (
 	a <- x
 	a
 )
 
 do (
 	-- loud echo
-	_ <- join (do (
+	_ <- mjoin (do (
 		x <- readInt <>
 		return (writeInt (mul x x !))
 	))
 	
 	-- sum two numbers
-	join (do (
+	mjoin (do (
 		x <- readInt <>
 		y <- readInt <>
 		return (writeInt (add x y !))
