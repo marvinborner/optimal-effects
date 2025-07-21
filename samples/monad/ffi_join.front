@@ -1,0 +1,22 @@
+let fac n = (join
+  (do (
+    x <- evalLang "python" "math.factorial" n
+    _ <- writeInt x
+    return (concat "python + ")
+  ))
+  (do (
+    x <- evalLang "r" "factorial" n
+    _ <- writeInt x
+    return (concat "r + ")
+  ))
+  (do (
+    x <- evalLang "julia" "factorial" n
+    _ <- writeInt x
+    return "julia"
+  )))
+
+do (
+  res <- fac 12
+  con <- concat res " = weird"
+  print con
+)

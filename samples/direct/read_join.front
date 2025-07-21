@@ -1,0 +1,7 @@
+let file = (join
+  (concat (readFile "partA.txt"))
+  (concat (readFile "partB.txt"))
+  (concat (readFile "partC.txt"))
+  (readFile "partD.txt"))
+
+writeFile "full.txt" file

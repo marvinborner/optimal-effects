@@ -111,7 +111,7 @@ executeActor "pred" [NumberData n] p = replace $ do
   trace ("pred: " <> show n) $ byNode $ gData @m tok (NumberData $ n - 1)
   byNode $ gToken @m p tok
 
-executeActor "equal" [NumberData b, NumberData a] p
+executeActor "isEqual" [NumberData b, NumberData a] p
   | a == b = trace ("equal: " <> show a <> " " <> show b) $ churchTrue @m p
   | a /= b = trace ("not equal: " <> show a <> " " <> show b) $ churchFalse @m p
 

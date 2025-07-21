@@ -1,0 +1,20 @@
+All 106
+  Duplicate 2
+  Annihilate 8
+  Erase 7
+  Multiplexer 0
+  Token 52
+    Redirect Token 21
+    Reflect Token 10
+    Backpropagate Actor 7
+    Backpropagate Actor 2 0
+    Backpropagate Uneffectful 14
+  Effectful 37
+    Apply Actor 7
+    Apply Recursor 0
+    Execute Conjunctive Fork 0
+    Execute Disjunctive Fork 2
+    Return Conjunctive Fork 0
+    Return Disjunctive Fork 2
+    Initialize Partial Application 13
+    Apply Partially 13

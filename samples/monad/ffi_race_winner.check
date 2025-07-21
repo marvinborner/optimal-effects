@@ -1,0 +1,18 @@
+All 70
+  Duplicate 2
+  Annihilate 9
+  Erase 7
+  Multiplexer 0
+  Token 15
+    Rotate Bind 6
+    Pop Unit 3
+    Pop Bind 6
+  Effectful 37
+    Apply Actor 7
+    Apply Recursor 0
+    Execute Conjunctive Fork 0
+    Execute Disjunctive Fork 2
+    Return Conjunctive Fork 0
+    Return Disjunctive Fork 2
+    Initialize Partial Application 13
+    Apply Partially 13

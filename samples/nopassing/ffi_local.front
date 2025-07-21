@@ -1,0 +1,8 @@
+-- see also ffi_race_winner in direct/ and monad/
+
+let fac n = race
+  (evalLang "r" "factorial" n)
+  (evalLang "python" "math.factorial" n)
+  (evalLang "julia" "factorial" n) !
+
+writeInt (fac 12) !

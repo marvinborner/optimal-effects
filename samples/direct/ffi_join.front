@@ -1,0 +1,19 @@
+let fac n = (join
+  ((
+    let x = evalLang "python" "math.factorial" n
+    writeInt x
+    concat "python + "
+  ))
+  ((
+    let x = evalLang "r" "factorial" n
+    writeInt x
+    concat "r + "
+  ))
+  ((
+    let x = evalLang "julia" "factorial" n
+    writeInt x
+    "julia"
+  )))
+
+let res = fac 12
+print (concat res " = weird")

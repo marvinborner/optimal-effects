@@ -1,0 +1,22 @@
+-- in our interpreter, this will still be determinstic (assuming all evalLang's complete successfully)
+-- but try, say, adding a syntax error to a function call!
+-- evalLang is implemented in such a way that it consumes tokens when failing!
+
+let fac n = (race
+  ((
+    let x = evalLang "python" "math.factorial" n
+    writeInt x
+    "python!!"
+  ))
+  ((
+    let x = evalLang "r" "factorial" n
+    writeInt x
+    "r!!"
+  ))
+  ((
+    let x = evalLang "julia" "factorial" n
+    writeInt x
+    "julia!!"
+  )))
+
+print (fac 12)

@@ -1,0 +1,13 @@
+-- just print the "source code"
+let exec program = print program
+
+-- the delay of `download` is simulated by its first argument
+-- if the number is not zero, its execution produces itself with i-1 and a bouncing token!
+-- this will not give the expected result with -p (parallel), as all delay is eliminated at the same time
+let angelicPong = race
+  (download 30 "www1.example.com/pong.exe")
+  (download 40 "www2.example.com/pong.exe")
+  (download 20 "www3.example.com/pong.exe")
+  (download 10 "www4.example.com/pong.exe") !
+
+exec angelicPong !
