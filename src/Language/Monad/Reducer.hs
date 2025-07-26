@@ -8,6 +8,7 @@
 module Language.Monad.Reducer
   ( bench
   , visualize
+  , count
   ) where
 
 import           Data.Foldable                  ( toList )
@@ -72,7 +73,7 @@ visualize _ _ _ term = do
   (_, _) <- UI.initialise
   let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeMS) term
   let layoutGraph = Layout.wrapGraph hypergraph
-  UI.run 50 id layoutStep layoutGraph (ruleTree @NodeMS)
+  UI.run 50 id layoutStep layoutGraph $ ruleTree @NodeMS
 
 -- from LambdaScope/GraphRewriting
 incIndex :: Int -> [Int] -> [Int]
@@ -81,10 +82,15 @@ incIndex 0 []       = [1]
 incIndex n (i : is) = i : incIndex (n - 1) is
 incIndex n []       = 0 : incIndex (n - 1) []
 
+count :: Bool -> Bool -> Bool -> Graph NodeMS -> IO ()
+count _ _ _ term = do
+  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeMS) term
+  let layoutGraph = Layout.wrapGraph hypergraph
+  UI.iterations layoutStep layoutGraph $ ruleTree @NodeMS
+
 -- from LambdaScope/GraphRewriting
 bench :: Bool -> Bool -> Bool -> Graph NodeMS -> IO ()
 bench _ random parallel term = do
-  (_, _) <- UI.initialise
   let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeMS) term
   rng <- newStdGen
   let func | random    = benchmarkRandom rng

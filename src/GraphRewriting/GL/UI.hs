@@ -16,67 +16,114 @@
 -- - Press space to pause/resume layouting. Currently layouting is automatically resumed when the graph is rewritten by right-clicking on an individual node and not when right-clicking on a menu entry. This also requires the mouse cursor to be positioned in the canvas area.
 --
 -- Please have a look the graph-rewriting-ski package for an example application that makes use of this library.
-module GraphRewriting.GL.UI (module GraphRewriting.GL.UI, LabelledTree (..), showLabelledTree) where
+module GraphRewriting.GL.UI
+  ( module GraphRewriting.GL.UI
+  , LabelledTree(..)
+  , showLabelledTree
+  ) where
 
-import qualified Graphics.UI.GLUT as GL
-import Graphics.UI.GLUT (($=), get)
-import GraphRewriting.Graph
-import GraphRewriting.Graph.Read
-import GraphRewriting.Rule
-import Data.IORef
-import GraphRewriting.GL.Render
-import GraphRewriting.GL.Global
-import GraphRewriting.GL.HyperEdge
-import GraphRewriting.GL.Canvas
-import GraphRewriting.GL.Menu
-import GraphRewriting.Layout.RotPortSpec
-import Data.Set as Set
-import Control.Monad
+import           Control.Monad
+import           Data.IORef
+import           Data.List                      ( mapAccumL )
+import           Data.Set                      as Set
+import           GraphRewriting.GL.Canvas
+import           GraphRewriting.GL.Global
+import           GraphRewriting.GL.HyperEdge
+import           GraphRewriting.GL.Menu
+import           GraphRewriting.GL.Render
+import           GraphRewriting.Graph
+import           GraphRewriting.Graph.Read
+import           GraphRewriting.Layout.RotPortSpec
+import           GraphRewriting.Rule
+import qualified Graphics.UI.GLUT              as GL
+import           Graphics.UI.GLUT               ( ($=)
+                                                , get
+                                                )
 
 -- | Initialises GLUT. Returns program name and command line arguments.
-initialise ∷ IO (String, [String])
+initialise :: IO (String, [String])
 initialise = GL.getArgsAndInitialize
 
-run ∷ (View Position n, Render n', View Position n', View Rotation n', PortSpec n', View [Port] n')
-    ⇒ Int                  -- ^ The number of initial layout steps to apply before displaying the graph
-    → (Graph n → Graph n') -- ^ A projection function that is applied just before displaying the graph
-    → (Node → Rewrite n a) -- ^ The monadic graph transformation code for a layout step
-    → Graph n
-    → LabelledTree (Rule n) -- ^ The rule menu given as a tree of named rules
-    → IO ()
+run
+  :: ( View Position n
+     , Render n'
+     , View Position n'
+     , View Rotation n'
+     , PortSpec n'
+     , View [Port] n'
+     )
+  => Int                  -- ^ The number of initial layout steps to apply before displaying the graph
+  -> (Graph n -> Graph n') -- ^ A projection function that is applied just before displaying the graph
+  -> (Node -> Rewrite n a) -- ^ The monadic graph transformation code for a layout step
+  -> Graph n
+  -> LabelledTree (Rule n) -- ^ The rule menu given as a tree of named rules
+  -> IO ()
 run initSteps project layoutStep g rules = do
-	globalVars ← newIORef $ GlobalVars
-		{graph        = execGraph (replicateM_ initSteps $ mapM layoutStep =<< readNodeList) g,
-		 paused       = False,
-		 selectedRule = 0,
-		 highlighted  = Set.empty,
-		 layoutStep   = \n → layoutStep n >> return (),
-		 canvas       = undefined,
-		 menu         = undefined,
-		 getRules     = fmap (\r → (0,r)) rules}
+  globalVars <- newIORef $ GlobalVars
+    { graph        = execGraph
+                       (replicateM_ initSteps $ mapM layoutStep =<< readNodeList)
+                       g
+    , paused       = False
+    , selectedRule = 0
+    , highlighted  = Set.empty
+    , layoutStep   = \n -> layoutStep n >> return ()
+    , canvas       = undefined
+    , menu         = undefined
+    , getRules     = fmap (\r -> (0, r)) rules
+    }
 
 
-	-- command line benchmarking
+  -- command line benchmarking
 --			gvs <- readIORef globalVars
 --			finalTree <- reduceAll globalVars (graph gvs) rules
 --			putStrLn ("Nr of reductions to normal form:\n" ++ showIndent 0 finalTree) -- (getTopCounter finalTree))
 --			putStrLn $ showFlatTabs finalTree
-	GL.initialDisplayMode $= [GL.DoubleBuffered, GL.Multisampling]
+  GL.initialDisplayMode $= [GL.DoubleBuffered, GL.Multisampling]
 --	print =<< get GL.sampleBuffers
 --	print =<< get GL.samples
 --	print =<< get GL.subpixelBits
 --
 --	GL.initialDisplayCapabilities $= [GL.With GL.DisplayDouble, GL.With GL.DisplaySamples]
 --	GL.multisample $= GL.Enabled
-	p ← get GL.displayModePossible
-	when (not p) $ do
-		GL.initialDisplayMode $= [GL.DoubleBuffered]
-		p ← get GL.displayModePossible
-		when (not p) $ GL.initialDisplayMode $= []
-	c ← setupCanvas project star globalVars    -- creates the window, registers callbacks
-	modifyIORef globalVars $ \v → v {canvas = c}
-	setupMenu globalVars
-	layoutLoop globalVars
-	GL.mainLoop
-	GL.exit
-	return ()
+  p <- get GL.displayModePossible
+  when (not p) $ do
+    GL.initialDisplayMode $= [GL.DoubleBuffered]
+    p <- get GL.displayModePossible
+    when (not p) $ GL.initialDisplayMode $= []
+  c <- setupCanvas project star globalVars    -- creates the window, registers callbacks
+  modifyIORef globalVars $ \v -> v { canvas = c }
+  setupMenu globalVars
+  layoutLoop globalVars
+  GL.mainLoop
+  GL.exit
+  return ()
+
+iterations
+  :: (View Position n, Render n, View Rotation n, PortSpec n, View [Port] n)
+  => (Node -> Rewrite n a) -- ^ The monadic graph transformation code for a layout step
+  -> Graph n
+  -> LabelledTree (Rule n) -- ^ The rule menu given as a tree of named rules
+  -> IO ()
+iterations layoutStep g rules = do
+  globalVars <- newIORef $ GlobalVars
+    { graph = execGraph (replicateM_ 0 $ mapM layoutStep =<< readNodeList) g
+    , paused       = False
+    , selectedRule = 0
+    , highlighted  = Set.empty
+    , layoutStep   = \n -> layoutStep n >> return ()
+    , canvas       = undefined
+    , menu         = undefined
+    , getRules     = fmap (\r -> (0, r)) rules
+    }
+
+  let
+    loop i prev = do
+      applyLeafRules id 0 globalVars
+      ruleTree <- getRules <$> readIORef globalVars
+      let out = showRuleTree ruleTree
+      if out == prev then return (i, out) else putStrLn out >> loop (i + 1) out
+
+  (iter, tree) <- loop (-1) ""
+  putStrLn tree
+  print iter
+  return ()

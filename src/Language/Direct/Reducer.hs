@@ -8,6 +8,7 @@
 module Language.Direct.Reducer
   ( visualize
   , bench
+  , count
   ) where
 
 import           Data.Direct
@@ -82,10 +83,17 @@ incIndex 0 []       = [1]
 incIndex n (i : is) = i : incIndex (n - 1) is
 incIndex n []       = 0 : incIndex (n - 1) []
 
+count :: Bool -> Bool -> Bool -> Graph NodeDS -> IO ()
+count infer _ _ term = do
+  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeDS) term
+  let layoutGraph = Layout.wrapGraph hypergraph
+  let dir | infer     = BottomLeft
+          | otherwise = BottomRight
+  UI.iterations layoutStep layoutGraph $ ruleTree @NodeDS dir
+
 -- from LambdaScope/GraphRewriting, but with randomness and flags
 bench :: Bool -> Bool -> Bool -> Graph NodeDS -> IO ()
 bench infer random parallel term = do
-  (_, _) <- UI.initialise
   let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeDS) term
   rng <- newStdGen
   let func | random    = benchmarkRandom rng

@@ -26,7 +26,7 @@ import qualified Language.Lambda.Transformer.Monad
 import qualified Language.Monad.Reducer        as Monad
 import           Options.Applicative
 
-data ArgMode = Visualize | Benchmark
+data ArgMode = Visualize | Benchmark | Count
   deriving Eq
 
 data Args = Args
@@ -39,9 +39,21 @@ data Args = Args
 
 mode :: Parser ArgMode
 mode =
-  flag' Visualize (long "visualize" <> short 'v' <> help "Visualize reduction")
-    <|> flag' Benchmark
-              (long "benchmark" <> short 'b' <> help "Benchmark reduction")
+  flag'
+      Visualize
+      (long "visualize" <> short 'v' <> help
+        "Visualize reduction interactively (default)."
+      )
+    <|> flag'
+          Benchmark
+          (long "benchmark" <> short 'b' <> help
+            "Benchmark reduction until normal form."
+          )
+    <|> flag'
+          Count
+          (long "count" <> short 'c' <> help
+            "Count iterations until normal form."
+          )
 
 args :: Parser Args
 args =
@@ -49,7 +61,7 @@ args =
     <$> (mode <|> pure Visualize)
     <*> strOption
           (long "target" <> short 't' <> value "direct" <> help
-            "target backend (direct, monad)"
+            "target backend (direct[default], monad)"
           )
     <*> switch
           (  long "infer"
@@ -67,7 +79,7 @@ args =
           (  long "parallel"
           <> short 'p'
           <> help
-               "Simulate parallel reduction by applying rules exhaustively instead of once (while benchmarking). Counts all possible parallel reductions per rule as 1. Will not have constant interaction counts."
+               "Simulate parallel reduction by applying rules exhaustively instead of once (while benchmarking). Counts all possible parallel reductions per rule as 1. Will not have constant interaction counts with -r."
           )
 
 lambdaPipeline target input = do
@@ -80,12 +92,14 @@ monadPipeline infer random parallel mode =
  where
   func Visualize = Monad.visualize
   func Benchmark = Monad.bench
+  func Count     = Monad.count
 
 directPipeline infer random parallel mode =
   either putStrLn (func mode infer random parallel) . Lambda.transformDirect dir
  where
   func Visualize = Direct.visualize
   func Benchmark = Direct.bench
+  func Count     = Direct.count
   dir = case infer of -- TODO: this should absolutely not be here
     True  -> Direct.BottomLeft
     False -> Direct.BottomRight

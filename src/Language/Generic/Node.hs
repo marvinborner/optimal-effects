@@ -43,5 +43,3 @@ class (Eq n, INet n, View [Port] n) => GenericNode n where
   isRecursor :: n -> Bool
   isData :: n -> Bool
   isFork :: n -> Bool
-  isConjunctive :: n -> Bool
-  isDisjunctive :: n -> Bool

@@ -12,7 +12,10 @@ import           Prelude.Unicode
 import           Control.Applicative
 import           Control.Monad.Reader
 import           Control.Monad.State
-import           Data.List                      ( nub )
+import           Data.List                      ( (\\)
+                                                , mapAccumL
+                                                , nub
+                                                )
 import           GraphRewriting.Graph.Read
 import           GraphRewriting.Graph.Write
 import           GraphRewriting.Pattern
@@ -22,6 +25,8 @@ import           System.Random.Shuffle
 
 import qualified Data.IntMap                   as Map
 import qualified Data.IntSet                   as Set
+
+import           Debug.Trace
 
 -- | A rewriting rule is defined as a 'Pattern' that returns a 'Rewrite'
 type Rule n = Pattern n (Rewrite n ())
@@ -110,14 +115,6 @@ byWire e1 e2 = byConnector [e1, e2]
 byConnector :: [Edge] -> Replace n ()
 byConnector es = Replace $ return ((), [es])
 
--- byEdgeMerge ∷ View [Port] n ⇒ Edge → Edge → Replace n ()
--- byEdgeMerge e1 e2 = when (e1 ≢ e2) $ do
--- 		ns ← attachedNodes e2
--- 		sequence_ [byNode (adjust (map replacePort) n) | n ← ns]
--- 		-- modifyEdgeMap $ Map.adjust (Set.union $ Set.fromList $ map nKey ns) (eKey e1)
--- 		deleteEdge e2 >> return ()
--- 	where replacePort p = if p ≡ e2 then e1 else p
-
 -- combinators ---------------------------------------------------------------
 
 -- | Apply two rules consecutively. Second rule is only applied if first one succeeds. Fails if (and only if) first rule fails.
@@ -163,8 +160,8 @@ benchmarkRandom rng rules = rec rng where
     contractions <- evalPattern (anyOf shuffled) <$> ask
     case contractions of
       []          -> return []
-      -- (i, rw) : _ -> trace (show i) $ fmap (i :) (rw >> rec (fst $ split rng))
-      (i, rw) : _ -> fmap (i :) (rw >> rec (fst $ split rng))
+      (i, rw) : _ -> trace (show i) $ fmap (i :) (rw >> rec (fst $ split rng))
+      -- (i, rw) : _ -> fmap (i :) (rw >> rec (fst $ split rng))
 
   indexedRules = zipWith addIndex [0 ..] rules
    where

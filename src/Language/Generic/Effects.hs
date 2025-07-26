@@ -111,9 +111,24 @@ executeActor "pred" [NumberData n] p = replace $ do
   trace ("pred: " <> show n) $ byNode $ gData @m tok (NumberData $ n - 1)
   byNode $ gToken @m p tok
 
+executeActor "isNotEqual" [NumberData b, NumberData a] p
+  | a /= b = trace ("not equal: " <> show a <> " " <> show b) $ churchTrue @m p
+  | otherwise = trace ("equal: " <> show a <> " " <> show b) $ churchFalse @m p
+
 executeActor "isEqual" [NumberData b, NumberData a] p
   | a == b = trace ("equal: " <> show a <> " " <> show b) $ churchTrue @m p
-  | a /= b = trace ("not equal: " <> show a <> " " <> show b) $ churchFalse @m p
+  | otherwise = trace ("not equal: " <> show a <> " " <> show b)
+  $ churchFalse @m p
+
+executeActor "isLess" [NumberData b, NumberData a] p
+  | a < b = trace ("less: " <> show a <> " " <> show b) $ churchTrue @m p
+  | otherwise = trace ("not less: " <> show a <> " " <> show b)
+  $ churchFalse @m p
+
+executeActor "isGreater" [NumberData b, NumberData a] p
+  | a > b = trace ("greater: " <> show a <> " " <> show b) $ churchTrue @m p
+  | otherwise = trace ("not greater: " <> show a <> " " <> show b)
+  $ churchFalse @m p
 
 executeActor "add" [NumberData b, NumberData a] p = replace $ do
   tok <- byEdge -- send token back!
@@ -141,6 +156,13 @@ executeActor "div" [NumberData b, NumberData a] p = replace $ do
   trace ("div: " <> show a <> " " <> show b) $ byNode $ gData @m
     tok
     (NumberData $ a `div` b)
+  byNode $ gToken @m p tok
+
+executeActor "mod" [NumberData b, NumberData a] p = replace $ do
+  tok <- byEdge -- send token back!
+  trace ("mod: " <> show a <> " " <> show b) $ byNode $ gData @m
+    tok
+    (NumberData $ a `mod` b)
   byNode $ gToken @m p tok
 
 executeActor "download" [StringData url, NumberData 0] p = replace $ do
