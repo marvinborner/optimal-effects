@@ -84,7 +84,6 @@ compile dir node edge conn = para $ \case
     return Context { port = o, bindings = [(i, o)] }
   L.Rec (_, f) (rec, _) -> do
     -- since f must always be an abstraction, we let the application to rec interact immediately
-    -- this way, we don't end in endless recursion when the rec always gets unwrapped by the token
     ctx@(Context { bindings = bs, port = p }) <- f
     x <- bindName node edge conn ctx
     r <- edge -- rec
@@ -123,4 +122,4 @@ executeRecursor dir boxed o = replace $ do
   tok                    <- byEdge
   (Context { port = p }) <- compile dir byNode byEdge byWire boxed
   byWire p tok
-  byNode Token { inp = tok, out = o }
+  byNode Token { inp = o, out = tok }

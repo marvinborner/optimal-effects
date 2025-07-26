@@ -1,11 +1,11 @@
-All 1250
+All 1240
   Duplicate 132
   Annihilate 135
   Erase 64
   Multiplexer 150
-  Token 588
+  Token 578
     Redirect Token 249
-    Reflect Token 126
+    Reflect Token 116
     Backpropagate Actor 33
     Backpropagate Actor 2 55
     Backpropagate Uneffectful 125
