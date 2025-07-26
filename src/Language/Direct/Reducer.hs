@@ -122,11 +122,11 @@ ruleTree dir = Branch
   , Leaf "Multiplexer" $ compileShare @m
   , Branch
     "Token"
-    [ Leaf "Redirect Token"            redirectToken
-    , Leaf "Reflect Token"             reflectToken
-    , Leaf "Backpropagate Actor"       backpropagateActor
-    , Leaf "Backpropagate Actor 2"     backpropagateActor2
-    , Leaf "Backpropagate Uneffectful" backpropagateUneffectful
+    [ Leaf "Redirect Token"         redirectToken
+    , Leaf "Reflect Token"          reflectToken
+    , Leaf "Infer Left Effectful"   inferLeftEffectful
+    , Leaf "Infer Top Effectful"    inferTopEffectful
+    , Leaf "Infer Left Uneffectful" inferLeftUneffectful
     ]
   , Branch
     "Effectful"

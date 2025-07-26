@@ -123,8 +123,8 @@ isControlling (Duplicator{}) = True
 isControlling (Eraser{}    ) = True
 isControlling _              = False
 
-backpropagateActor :: (View [Port] n, View NodeDS n) => Rule n
-backpropagateActor = do -- ==> there is an action somewhere inside b
+inferLeftEffectful :: (View [Port] n, View NodeDS n) => Rule n
+inferLeftEffectful = do -- ==> there is an action somewhere inside b
   a@(Redirector { direction = BottomLeft }) :-: b <- activePair
   guard $ hasActionPotential b
   guard $ not $ isControlling b
@@ -132,8 +132,8 @@ backpropagateActor = do -- ==> there is an action somewhere inside b
     byNode $ a { direction = BottomRight }
     byNode b
 
-backpropagateActor2 :: (View [Port] n, View NodeDS n) => Rule n
-backpropagateActor2 = do -- ==> there is an action somewhere inside b
+inferTopEffectful :: (View [Port] n, View NodeDS n) => Rule n
+inferTopEffectful = do -- ==> there is an action somewhere inside b
   a@(Redirector { direction = Top }) :-: b <- activePair
   guard $ hasActionPotential b
   guard $ not $ isControlling b
@@ -141,8 +141,8 @@ backpropagateActor2 = do -- ==> there is an action somewhere inside b
     byNode $ a { direction = BottomRight }
     byNode b
 
-backpropagateUneffectful :: (View [Port] n, View NodeDS n) => Rule n
-backpropagateUneffectful = do -- ==> there is no immediate action potential in b
+inferLeftUneffectful :: (View [Port] n, View NodeDS n) => Rule n
+inferLeftUneffectful = do -- ==> there is no immediate action potential in b
   a@(Redirector { direction = BottomLeft }) :-: b <- activePair
   guard $ not $ hasActionPotential b
   guard $ not $ isControlling b

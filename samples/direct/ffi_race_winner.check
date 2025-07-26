@@ -6,9 +6,9 @@ All 106
   Token 52
     Redirect Token 21
     Reflect Token 10
-    Backpropagate Actor 7
-    Backpropagate Actor 2 0
-    Backpropagate Uneffectful 14
+    Infer Left Effectful 7
+    Infer Top Effectful 0
+    Infer Left Uneffectful 14
   Effectful 37
     Apply Actor 7
     Apply Recursor 0
