@@ -35,6 +35,7 @@ import           GraphRewriting.Graph
 import           GraphRewriting.Graph.Read
 import           GraphRewriting.Layout.RotPortSpec
 import           GraphRewriting.Rule
+import           Graphics.Rendering.MiniTypeset
 import qualified Graphics.UI.GLUT              as GL
 import           Graphics.UI.GLUT               ( ($=)
                                                 , get
@@ -42,7 +43,10 @@ import           Graphics.UI.GLUT               ( ($=)
 
 -- | Initialises GLUT. Returns program name and command line arguments.
 initialise :: IO (String, [String])
-initialise = GL.getArgsAndInitialize
+initialise = do
+  mf <- newMultiFont uiUFC
+  writeIORef multiFont mf
+  GL.getArgsAndInitialize
 
 run
   :: ( View Position n

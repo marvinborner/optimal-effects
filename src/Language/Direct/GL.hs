@@ -15,6 +15,7 @@ import           GraphRewriting.GL.Render
 import           GraphRewriting.Layout.PortSpec
 import           GraphRewriting.Strategies.Control
 import qualified Graphics.UI.GLUT              as GL
+import           Language.Generic.GL
 
 instance PortSpec NodeDS where
   portSpec node =
@@ -58,24 +59,24 @@ instance Render n => Render (Wrapper n) where
       Control{} -> GL.renderPrimitive GL.LineLoop (circle 1.2 1.2 20)
 
 renderNode node = drawPorts node >> case node of
-  Initiator{}                           -> drawNodeCircle "I"
-  Abstractor{}                          -> drawNode "L"
-  Eraser{}                              -> drawNodeCircle "E"
+  Initiator{}                           -> drawNodeCircle "ι"
+  Abstractor{}                          -> drawNode "λ"
+  Eraser{}                              -> drawNodeCircle "ε"
   -- Duplicator{}                          -> drawNodeBlack $ show $ level node
   Duplicator{}                          -> drawNodeBlack ""
-  Redirector { direction = Top }        -> drawNode "@"
-  Redirector { direction = BottomRight } -> drawNode "@R"
-  Redirector { direction = BottomLeft } -> drawNode "@L"
+  Redirector { direction = Top }        -> drawNode "α"
+  Redirector { direction = BottomRight } -> drawNode "αᴿ"
+  Redirector { direction = BottomLeft } -> drawNode "αᴸ"
   Actor { name = n, arity = a }         -> drawNode $ T.unpack n <> show a
-  ActorC { name = n, arity = a } -> drawNode $ T.unpack n <> show a <> "c"
+  ActorC { name = n, arity = a } -> drawNode $ T.unpack n <> show a <> "ᶜ"
   Recursor{}                            -> drawNode "REC"
-  Token{}                               -> drawNodeCircle "T"
-  Data { dat = UnitData }               -> drawNodeCircle "()"
-  Data { dat = StringData s }           -> drawNodeCircle $ "D=" <> s
-  Data { dat = NumberData n }           -> drawNodeCircle $ "D=" <> show n
-  Fork { exec = False }                 -> drawNode "frk"
-  Fork { tpe = Conjunctive }            -> drawNode "con"
-  Fork { tpe = Disjunctive }            -> drawNode "dis"
+  Token{}                               -> drawNodeCircle "↑"
+  Data { dat = UnitData }               -> drawNode "⟨⟩"
+  Data { dat = StringData s }           -> drawNode $ "⟨" <> s <> "⟩"
+  Data { dat = NumberData n }           -> drawNode $ "⟨" <> show n <> "⟩"
+  Fork { exec = False }                 -> drawNode "ψ"
+  Fork { tpe = Conjunctive }            -> drawNode "∧"
+  Fork { tpe = Disjunctive }            -> drawNode "∨"
   Multiplexer{}                         -> drawNodeCircle "M"
 
 drawPorts :: NodeDS -> IO ()
@@ -85,33 +86,3 @@ drawPorts n = sequence_
   ports     = inspect n
   factor p | p == pp n = 2.0
            | otherwise = 1
-
-circle r1 r2 step = mapM_ vertex2 vs where
-  is = take (truncate step + 1) [0, i' ..]
-  i' = 2 * pi / step
-  vs = [ (r1 * cos i, r2 * sin i) | i <- is ]
-
-drawPort factor pos = GL.preservingMatrix $ do
-  GL.translate $ vector pos
-  GL.renderPrimitive GL.Polygon (circle (factor * 0.15) (factor * 0.15) 20)
-
-drawNode label = do
-  GL.preservingMatrix $ GL.renderPrimitive GL.LineLoop $ do
-    vertex2 (0, 0.9)
-    vertex2 (-1, -0.5)
-    vertex2 (1, -0.5)
-  renderString label
-
-drawNodeCircle label = do
-  GL.renderPrimitive GL.LineLoop (circle 1 1 20)
-  renderString label
-
-drawNodeBlack label = do
-  GL.color (GL.Color3 0 0 0 :: GL.Color3 GL.GLfloat)
-  GL.preservingMatrix $ GL.renderPrimitive GL.Polygon $ do
-    vertex2 (0, 0.9)
-    vertex2 (-1, -0.5)
-    vertex2 (1, -0.5)
-
-  GL.color (GL.Color3 1 1 1 :: GL.Color3 GL.GLfloat)
-  renderString label

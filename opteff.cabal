@@ -16,6 +16,8 @@ license:        MIT
 build-type:     Simple
 extra-source-files:
     readme.md
+data-files:
+    font/LinLibertine_R.otf
 
 source-repository head
   type: git
@@ -68,6 +70,7 @@ library
       Language.Generic.Effects
       Language.Generic.Node
       Language.Generic.Rules
+      Language.Generic.GL
   other-modules:
       Paths_opteff
       GraphRewriting.Graph.Internal
@@ -86,6 +89,7 @@ library
   build-depends:
       AC-Vector >=2.4.0
     , base >=4.9 && <5
+    , minitypeset-opengl
     , base-unicode-symbols >=0.2 && <0.3
     , containers >=0.3 && <0.7
     , GLUT >=2.2 && <3
