@@ -31,15 +31,16 @@ instance Semigroup Context where
 transformDirect :: AppDir -> L.Term -> Either String (Graph NodeDS)
 transformDirect dir term = do
   let (bindings, graph) = flip runGraph emptyGraph $ do
-        context@(Context { port = n, bindings = bs }) <- compile dir
-                                                                 newNode
-                                                                 newEdge
-                                                                 mergeEdges
-                                                                 term
+        context@(Context { port = n, bindings = bs }) <- compile
+          dir
+          (newNode . flip Wrap ImmediateNode)
+          newEdge
+          mergeEdges
+          term
         o1 <- newEdge
-        i  <- newNode Initiator { out = o1 }
+        i  <- newNode $ Wrap Initiator { out = o1 } ImmediateNode
         o2 <- newEdge
-        t  <- newNode Token { inp = o2, out = o1 }
+        t  <- newNode $ Wrap Token { inp = o2, out = o1 } ImmediateNode
         mergeEdges o2 n
         return bs
   when (any (\(x, _) -> x >= 0) bindings)
@@ -126,4 +127,4 @@ executeRecursor dir boxed o = replace $ do
                                     byWire
                                     boxed
   byWire p tok
-  byNode Token { inp = o, out = tok }
+  byNode $ Wrap Token { inp = o, out = tok } ImmediateNode

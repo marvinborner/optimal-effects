@@ -38,12 +38,14 @@ data NodeMS
         | Fork        {tpe :: Lambda.ForkType, inp, lhs, rhs :: Port, exec :: Bool}
         | BindN       {inp, arg, var :: Port, exec :: Bool}
         | UnitN       {inp, out :: Port}
+        | Wrap        {node :: NodeMS, kind :: WrapType}
 
 instance Eq NodeMS where
   Eraser{}                  == Eraser{}                  = True
   Token{}                   == Token{}                   = True -- for async actions
   Abstractor{}              == Applicator{}              = True -- both CON in SIC!
   Duplicator { level = l1 } == Duplicator { level = l2 } = l1 == l2
+  Wrap { node = n1 }        == Wrap { node = n2 }        = n1 == n2
   _                         == _                         = False
 
 instance View [Port] NodeMS where
@@ -62,6 +64,7 @@ instance View [Port] NodeMS where
     Fork { inp = i, lhs = l, rhs = r }           -> [i, l, r]
     BindN { inp = i, arg = a, var = v }          -> [i, a, v]
     UnitN { inp = i, out = o }                   -> [i, o]
+    Wrap { node = n }                            -> inspect n
   update ports node = case node of
     Initiator{}  -> node { out = o } where [o] = ports
     Applicator{} -> node { inp = i, func = f, arg = a }
@@ -72,14 +75,15 @@ instance View [Port] NodeMS where
     Duplicator{} -> node { inp = i, out1 = o1, out2 = o2 }
       where [i, o1, o2] = ports
     Multiplexer{} -> node { out = o, ins = is } where o : is = ports
-    Actor{}       -> node { inp = i } where [i] = ports
-    ActorC{}      -> node { inp = i, cur = c } where [i, c] = ports
-    Recursor{}    -> node { inp = i } where [i] = ports
-    Token{}       -> node { inp = i, out = o } where [i, o] = ports
-    Data{}        -> node { inp = i } where [i] = ports
-    Fork{}        -> node { inp = i, lhs = l, rhs = r } where [i, l, r] = ports
-    BindN{}       -> node { inp = i, arg = a, var = v } where [i, a, v] = ports
-    UnitN{}       -> node { inp = i, out = o } where [i, o] = ports
+    Actor{} -> node { inp = i } where [i] = ports
+    ActorC{} -> node { inp = i, cur = c } where [i, c] = ports
+    Recursor{} -> node { inp = i } where [i] = ports
+    Token{} -> node { inp = i, out = o } where [i, o] = ports
+    Data{} -> node { inp = i } where [i] = ports
+    Fork{} -> node { inp = i, lhs = l, rhs = r } where [i, l, r] = ports
+    BindN{} -> node { inp = i, arg = a, var = v } where [i, a, v] = ports
+    UnitN{} -> node { inp = i, out = o } where [i, o] = ports
+    Wrap { node = n, kind = w } -> Wrap (update ports n) w
 
 instance INet NodeMS where
   principalPort = pp
@@ -103,6 +107,7 @@ pp node = case node of
   BindN { inp = i, exec = False }              -> i
   BindN { arg = a, exec = True }               -> a
   UnitN { inp = i }                            -> i
+  Wrap { node = n }                            -> pp n
 
 instance GenericNode NodeMS where
   gInitiator   = Initiator
@@ -117,31 +122,47 @@ instance GenericNode NodeMS where
   gRecursor    = Recursor
   gData        = Data
   gFork        = Fork
+  gWrap        = Wrap
 
   gpp          = pp
 
   -- Racket-style :)
   isInitiator Initiator{} = True
+  isInitiator (Wrap n _)  = isInitiator n
   isInitiator _           = False
   isApplicator Applicator{} = True
+  isApplicator (Wrap n _)   = isApplicator n
   isApplicator _            = False
   isAbstractor Abstractor{} = True
+  isAbstractor (Wrap n _)   = isAbstractor n
   isAbstractor _            = False
-  isEraser Eraser{} = True
-  isEraser _        = False
+  isEraser Eraser{}   = True
+  isEraser (Wrap n _) = isEraser n
+  isEraser _          = False
   isDuplicator Duplicator{} = True
+  isDuplicator (Wrap n _)   = isDuplicator n
   isDuplicator _            = False
   isMultiplexer Multiplexer{} = True
+  isMultiplexer (Wrap n _)    = isMultiplexer n
   isMultiplexer _             = False
-  isToken Token{} = True
-  isToken _       = False
-  isActor Actor{} = True
-  isActor _       = False
-  isActorC ActorC{} = True
-  isActorC _        = False
+  isToken Token{}    = True
+  isToken (Wrap n _) = isToken n
+  isToken _          = False
+  isActor Actor{}    = True
+  isActor (Wrap n _) = isActor n
+  isActor _          = False
+  isActorC ActorC{}   = True
+  isActorC (Wrap n _) = isActorC n
+  isActorC _          = False
   isRecursor Recursor{} = True
+  isRecursor (Wrap n _) = isRecursor n
   isRecursor _          = False
-  isData Data{} = True
-  isData _      = False
-  isFork Fork{} = True
-  isFork _      = False
+  isData Data{}     = True
+  isData (Wrap n _) = isData n
+  isData _          = False
+  isFork Fork{}     = True
+  isFork (Wrap n _) = isFork n
+  isFork _          = False
+
+  isWrapType w (Wrap _ w') = w == w'
+  isWrapType w _           = False

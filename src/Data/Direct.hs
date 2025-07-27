@@ -27,8 +27,6 @@ import           Language.Generic.Node
 
 data AppDir = Top | BottomLeft | BottomRight
 
-data WrapType = RecursiveNode | ImmediateNode
-
 -- | The signature of our graph
 data NodeDS
         = Initiator   {out :: Port}
@@ -81,10 +79,10 @@ instance View [Port] NodeDS where
     Recursor{}    -> node { inp = i } where [i] = ports
     Redirector{}  -> node { portA = a, portB = b, portC = c }
       where [a, b, c] = ports
-    Token{}           -> node { inp = i, out = o } where [i, o] = ports
-    Data{}            -> node { inp = i } where [i] = ports
+    Token{} -> node { inp = i, out = o } where [i, o] = ports
+    Data{} -> node { inp = i } where [i] = ports
     Fork{} -> node { inp = i, lhs = l, rhs = r } where [i, l, r] = ports
-    Wrap { node = n } -> update ports n
+    Wrap { node = n, kind = w } -> Wrap (update ports n) w
 
 instance INet NodeDS where
   principalPort = pp
@@ -147,31 +145,47 @@ instance GenericNode NodeDS where
   gRecursor    = Recursor
   gData        = Data
   gFork        = Fork
+  gWrap        = Wrap
 
   gpp          = pp
 
   -- Racket-style :)
   isInitiator Initiator{} = True
+  isInitiator (Wrap n _)  = isInitiator n
   isInitiator _           = False
   isApplicator Redirector { direction = Top } = True
+  isApplicator (Wrap n _)                     = isApplicator n
   isApplicator _                              = False
   isAbstractor Abstractor{} = True
+  isAbstractor (Wrap n _)   = isAbstractor n
   isAbstractor _            = False
-  isEraser Eraser{} = True
-  isEraser _        = False
+  isEraser Eraser{}   = True
+  isEraser (Wrap n _) = isEraser n
+  isEraser _          = False
   isDuplicator Duplicator{} = True
+  isDuplicator (Wrap n _)   = isDuplicator n
   isDuplicator _            = False
   isMultiplexer Multiplexer{} = True
+  isMultiplexer (Wrap n _)    = isMultiplexer n
   isMultiplexer _             = False
-  isToken Token{} = True
-  isToken _       = False
-  isActor Actor{} = True
-  isActor _       = False
-  isActorC ActorC{} = True
-  isActorC _        = False
+  isToken Token{}    = True
+  isToken (Wrap n _) = isToken n
+  isToken _          = False
+  isActor Actor{}    = True
+  isActor (Wrap n _) = isActor n
+  isActor _          = False
+  isActorC ActorC{}   = True
+  isActorC (Wrap n _) = isActorC n
+  isActorC _          = False
   isRecursor Recursor{} = True
+  isRecursor (Wrap n _) = isRecursor n
   isRecursor _          = False
-  isData Data{} = True
-  isData _      = False
-  isFork Fork{} = True
-  isFork _      = False
+  isData Data{}     = True
+  isData (Wrap n _) = isData n
+  isData _          = False
+  isFork Fork{}     = True
+  isFork (Wrap n _) = isFork n
+  isFork _          = False
+
+  isWrapType w (Wrap _ w') = w == w'
+  isWrapType w _           = False

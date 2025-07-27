@@ -70,11 +70,13 @@ layoutStep n = do
 visualize :: Bool -> Bool -> Bool -> Graph NodeDS -> IO ()
 visualize infer _ _ term = do
   (_, _) <- UI.initialise
-  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeDS) term
+  let hypergraph = execGraph
+        (apply $ exhaustive $ compileShare @NodeDS ImmediateNode)
+        term
   let layoutGraph = Layout.wrapGraph hypergraph
   let dir | infer     = BottomLeft
           | otherwise = BottomRight
-  UI.run 50 id layoutStep layoutGraph $ ruleTree @NodeDS dir
+  UI.run 50 id layoutStep layoutGraph $ ruleTree @NodeDS ImmediateNode dir
 
 -- from LambdaScope/GraphRewriting
 incIndex :: Int -> [Int] -> [Int]
@@ -85,22 +87,24 @@ incIndex n []       = 0 : incIndex (n - 1) []
 
 count :: Bool -> Bool -> Bool -> Graph NodeDS -> IO ()
 count infer _ _ term = do
-  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeDS) term
+  let hypergraph =
+        execGraph (apply $ exhaustive $ compileShare @NodeDS ImmediateNode) term
   let layoutGraph = Layout.wrapGraph hypergraph
   let dir | infer     = BottomLeft
           | otherwise = BottomRight
-  UI.iterations layoutStep layoutGraph $ ruleTree @NodeDS dir
+  UI.iterations layoutStep layoutGraph $ ruleTree @NodeDS ImmediateNode dir
 
 -- from LambdaScope/GraphRewriting, but with randomness and flags
 bench :: Bool -> Bool -> Bool -> Graph NodeDS -> IO ()
 bench infer random parallel term = do
-  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeDS) term
+  let hypergraph =
+        execGraph (apply $ exhaustive $ compileShare @NodeDS ImmediateNode) term
   rng <- newStdGen
   let func | random    = benchmarkRandom rng
            | otherwise = benchmark
   let dir | infer     = BottomLeft
           | otherwise = BottomRight
-  let tree = ruleTree @NodeDS dir
+  let tree = ruleTree @NodeDS ImmediateNode dir
   let rules | parallel  = func (exhaustive <$> toList tree)
             | otherwise = func $ toList tree
   let indices    = evalGraph rules (Control.wrapGraph hypergraph)
@@ -112,30 +116,31 @@ bench infer random parallel term = do
 ruleTree
   :: forall m n
    . (GenericNode m, View NodeDS n, View [Port] n, View m n)
-  => AppDir
+  => WrapType
+  -> AppDir
   -> LabelledTree (Rule n)
-ruleTree dir = Branch
+ruleTree w dir = Branch
   "All"
-  [ Leaf "Duplicate" $ duplicate @m
-  , Leaf "Annihilate" $ annihilate @m
-  , Leaf "Erase" $ eraser @m
+  [ Leaf "Duplicate" $ duplicate @m w
+  , Leaf "Annihilate" $ annihilate @m w
+  , Leaf "Erase" $ eraser @m w
   , Branch
     "Token"
-    [ Leaf "Redirect Token"         redirectToken
-    , Leaf "Reflect Token"          reflectToken
-    , Leaf "Infer Left Effectful"   inferLeftEffectful
-    , Leaf "Infer Top Effectful"    inferTopEffectful
-    , Leaf "Infer Left Uneffectful" inferLeftUneffectful
+    [ Leaf "Redirect Token" $ redirectToken w
+    , Leaf "Reflect Token" $ reflectToken w
+    , Leaf "Infer Left Effectful" $ inferLeftEffectful w
+    , Leaf "Infer Top Effectful" $ inferTopEffectful w
+    , Leaf "Infer Left Uneffectful" $ inferLeftUneffectful w
     ]
   , Branch
     "Effectful"
-    [ Leaf "Apply Actor"                    applyActor
-    , Leaf "Apply Recursor"                 (applyRecursor dir)
-    , Leaf "Execute Conjunctive Fork"       execConjunctive
-    , Leaf "Execute Disjunctive Fork"       execDisjunctive
-    , Leaf "Return Conjunctive Fork"        returnConjunctive
-    , Leaf "Return Disjunctive Fork"        returnDisjunctive
-    , Leaf "Initialize Partial Application" initializeDataPartial
-    , Leaf "Apply Partially"                applyDataPartial
+    [ Leaf "Apply Actor" $ applyActor w
+    , Leaf "Apply Recursor" $ applyRecursor w dir
+    , Leaf "Execute Conjunctive Fork" $ execConjunctive w
+    , Leaf "Execute Disjunctive Fork" $ execDisjunctive w
+    , Leaf "Return Conjunctive Fork" $ returnConjunctive w
+    , Leaf "Return Disjunctive Fork" $ returnDisjunctive w
+    , Leaf "Initialize Partial Application" $ initializeDataPartial w
+    , Leaf "Apply Partially" $ applyDataPartial w
     ]
   ]

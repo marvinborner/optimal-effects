@@ -23,28 +23,36 @@ import           System.Process                 ( readProcess )
 import           Debug.Trace
 
 churchTrue
-  :: forall m n . (GenericNode m, View [Port] n, View m n) => Edge -> Rule n
-churchTrue p = replace $ do
+  :: forall m n
+   . (GenericNode m, View [Port] n, View m n)
+  => WrapType
+  -> Edge
+  -> Rule n
+churchTrue w p = replace $ do
   tok <- byEdge -- send token back!
   var <- byEdge
   era <- byEdge
   con <- byEdge
-  byNode $ gEraser @m era
-  byNode $ gAbstractor @m tok con var
-  byNode $ gAbstractor @m con var era
-  byNode $ gToken @m p tok
+  byNode $ gWrap (gEraser @m era) w
+  byNode $ gWrap (gAbstractor @m tok con var) w
+  byNode $ gWrap (gAbstractor @m con var era) w
+  byNode $ gWrap (gToken @m p tok) w
 
 churchFalse
-  :: forall m n . (GenericNode m, View [Port] n, View m n) => Edge -> Rule n
-churchFalse p = replace $ do
+  :: forall m n
+   . (GenericNode m, View [Port] n, View m n)
+  => WrapType
+  -> Edge
+  -> Rule n
+churchFalse w p = replace $ do
   tok <- byEdge -- send token back!
   var <- byEdge
   era <- byEdge
   con <- byEdge
-  byNode $ gEraser @m era
-  byNode $ gAbstractor @m tok con era
-  byNode $ gAbstractor @m con var var
-  byNode $ gToken @m p tok
+  byNode $ gWrap (gEraser @m era) w
+  byNode $ gWrap (gAbstractor @m tok con era) w
+  byNode $ gWrap (gAbstractor @m con var var) w
+  byNode $ gWrap (gToken @m p tok) w
 
 evalProcess :: String -> [String] -> IO (Either String Int)
 evalProcess proc args = do
@@ -68,134 +76,144 @@ evalLang "r" func arg =
 executeActor
   :: forall m n
    . (GenericNode m, View [Port] n, View m n)
-  => T.Text
+  => WrapType
+  -> T.Text
   -> [EffectData]
   -> Port
   -> Rule n
-executeActor "readInt" [UnitData] p = replace $ do
+executeActor w "readInt" [UnitData] p = replace $ do
   tok <- byEdge -- send token back!
-  trace "readInt" $ byNode $ gData @m tok (NumberData 42)
-  byNode $ gToken @m p tok
+  trace "readInt" $ byNode $ gWrap (gData @m tok (NumberData 42)) w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "writeInt" [NumberData n] p = replace $ do
+executeActor w "writeInt" [NumberData n] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("writeInt: " <> show n) $ byNode $ gData @m tok UnitData
-  byNode $ gToken @m p tok
+  trace ("writeInt: " <> show n) $ byNode $ gWrap (gData @m tok UnitData) w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "print" [StringData s] p = replace $ do
+executeActor w "print" [StringData s] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("print: " <> show s) $ byNode $ gData @m tok UnitData
-  byNode $ gToken @m p tok
+  trace ("print: " <> show s) $ byNode $ gWrap (gData @m tok UnitData) w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "readFile" [StringData f] p = replace $ do
+executeActor w "readFile" [StringData f] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("readFile: " <> show f) $ byNode $ gData @m
-    tok
-    (StringData $ "content of " <> f)
-  byNode $ gToken @m p tok
+  trace ("readFile: " <> show f) $ byNode $ gWrap
+    (gData @m tok (StringData $ "content of " <> f))
+    w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "writeFile" [StringData c, StringData f] p = replace $ do
+executeActor w "writeFile" [StringData c, StringData f] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("writeFile: " <> show f <> " <- " <> show c) $ byNode $ gData @m
-    tok
-    UnitData
-  byNode $ gToken @m p tok
+  trace ("writeFile: " <> show f <> " <- " <> show c) $ byNode $ gWrap
+    (gData @m tok UnitData)
+    w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "succ" [NumberData n] p = replace $ do
+executeActor w "succ" [NumberData n] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("succ: " <> show n) $ byNode $ gData @m tok (NumberData $ n + 1)
-  byNode $ gToken @m p tok
+  trace ("succ: " <> show n) $ byNode $ gWrap
+    (gData @m tok (NumberData $ n + 1))
+    w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "pred" [NumberData n] p = replace $ do
+executeActor w "pred" [NumberData n] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("pred: " <> show n) $ byNode $ gData @m tok (NumberData $ n - 1)
-  byNode $ gToken @m p tok
+  trace ("pred: " <> show n) $ byNode $ gWrap
+    (gData @m tok (NumberData $ n - 1))
+    w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "isNotEqual" [NumberData b, NumberData a] p
-  | a /= b = trace ("not equal: " <> show a <> " " <> show b) $ churchTrue @m p
-  | otherwise = trace ("equal: " <> show a <> " " <> show b) $ churchFalse @m p
+executeActor w "isNotEqual" [NumberData b, NumberData a] p
+  | a /= b = trace ("not equal: " <> show a <> " " <> show b)
+  $ churchTrue @m w p
+  | otherwise = trace ("equal: " <> show a <> " " <> show b)
+  $ churchFalse @m w p
 
-executeActor "isEqual" [NumberData b, NumberData a] p
-  | a == b = trace ("equal: " <> show a <> " " <> show b) $ churchTrue @m p
+executeActor w "isEqual" [NumberData b, NumberData a] p
+  | a == b = trace ("equal: " <> show a <> " " <> show b) $ churchTrue @m w p
   | otherwise = trace ("not equal: " <> show a <> " " <> show b)
-  $ churchFalse @m p
+  $ churchFalse @m w p
 
-executeActor "isLess" [NumberData b, NumberData a] p
-  | a < b = trace ("less: " <> show a <> " " <> show b) $ churchTrue @m p
+executeActor w "isLess" [NumberData b, NumberData a] p
+  | a < b = trace ("less: " <> show a <> " " <> show b) $ churchTrue @m w p
   | otherwise = trace ("not less: " <> show a <> " " <> show b)
-  $ churchFalse @m p
+  $ churchFalse @m w p
 
-executeActor "isGreater" [NumberData b, NumberData a] p
-  | a > b = trace ("greater: " <> show a <> " " <> show b) $ churchTrue @m p
-  | otherwise = trace ("not greater: " <> show a <> " " <> show b)
-  $ churchFalse @m p
+executeActor w "isGreater" [NumberData b, NumberData a] p
+  | a > b
+  = trace ("greater: " <> show a <> " " <> show b) $ churchTrue @m w p
+  | otherwise
+  = trace ("not greater: " <> show a <> " " <> show b) $ churchFalse @m w p
 
-executeActor "add" [NumberData b, NumberData a] p = replace $ do
+executeActor w "add" [NumberData b, NumberData a] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("add: " <> show a <> " " <> show b) $ byNode $ gData @m
-    tok
-    (NumberData $ a + b)
-  byNode $ gToken @m p tok
+  trace ("add: " <> show a <> " " <> show b) $ byNode $ gWrap
+    (gData @m tok (NumberData $ a + b))
+    w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "sub" [NumberData b, NumberData a] p = replace $ do
+executeActor w "sub" [NumberData b, NumberData a] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("sub: " <> show a <> " " <> show b) $ byNode $ gData @m
-    tok
-    (NumberData $ a - b)
-  byNode $ gToken @m p tok
+  trace ("sub: " <> show a <> " " <> show b) $ byNode $ gWrap
+    (gData @m tok (NumberData $ a - b))
+    w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "mul" [NumberData b, NumberData a] p = replace $ do
+executeActor w "mul" [NumberData b, NumberData a] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("mul: " <> show a <> " " <> show b) $ byNode $ gData @m
-    tok
-    (NumberData $ a * b)
-  byNode $ gToken @m p tok
+  trace ("mul: " <> show a <> " " <> show b) $ byNode $ gWrap
+    (gData @m tok (NumberData $ a * b))
+    w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "div" [NumberData b, NumberData a] p = replace $ do
+executeActor w "div" [NumberData b, NumberData a] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("div: " <> show a <> " " <> show b) $ byNode $ gData @m
-    tok
-    (NumberData $ a `div` b)
-  byNode $ gToken @m p tok
+  trace ("div: " <> show a <> " " <> show b) $ byNode $ gWrap
+    (gData @m tok (NumberData $ a `div` b))
+    w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "mod" [NumberData b, NumberData a] p = replace $ do
+executeActor w "mod" [NumberData b, NumberData a] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("mod: " <> show a <> " " <> show b) $ byNode $ gData @m
-    tok
-    (NumberData $ a `mod` b)
-  byNode $ gToken @m p tok
+  trace ("mod: " <> show a <> " " <> show b) $ byNode $ gWrap
+    (gData @m tok (NumberData $ a `mod` b))
+    w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "download" [StringData url, NumberData 0] p = replace $ do
+executeActor w "download" [StringData url, NumberData 0] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("download: " <> show url) $ byNode $ gData @m
-    tok
-    (StringData $ "content of " <> url)
-  byNode $ gToken @m p tok
+  trace ("download: " <> show url) $ byNode $ gWrap
+    (gData @m tok (StringData $ "content of " <> url))
+    w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor "download" [StringData url, NumberData i] p = replace $ do
+executeActor w "download" [StringData url, NumberData i] p = replace $ do
   tok <- byEdge -- bounce token!!
-  byNode $ gActor @m tok "download" 0 [StringData url, NumberData $ i - 1]
-  byNode $ gToken @m tok p
+  byNode $ gWrap
+    (gActor @m tok "download" 0 [StringData url, NumberData $ i - 1])
+    w
+  byNode $ gWrap (gToken @m tok p) w
 
-executeActor "evalLang" [NumberData arg, StringData func, StringData lang] p =
-  replace $ do
+executeActor w "evalLang" [NumberData arg, StringData func, StringData lang] p
+  = replace $ do
     let result = unsafePerformIO $ evalLang lang func arg
     trace ("evalLang: " <> show lang <> " " <> show func <> " " <> show arg)
           (return ())
     case result of
-      Left err ->
-        trace (lang <> " failed: " <> err) (byNode $ gData @m p UnitData)
+      Left err -> trace (lang <> " failed: " <> err)
+                        (byNode $ gWrap (gData @m p UnitData) w)
       Right ok -> do
         tok <- byEdge -- send token back!
-        byNode $ gData @m tok (NumberData ok)
-        byNode $ gToken @m p tok
+        byNode $ gWrap (gData @m tok (NumberData ok)) w
+        byNode $ gWrap (gToken @m p tok) w
 
-executeActor "concat" [StringData b, StringData a] p = replace $ do
+executeActor w "concat" [StringData b, StringData a] p = replace $ do
   tok <- byEdge -- send token back!
-  trace ("concat: " <> show a <> " " <> show b) $ byNode $ gData @m
-    tok
-    (StringData $ a <> b)
-  byNode $ gToken @m p tok
+  trace ("concat: " <> show a <> " " <> show b) $ byNode $ gWrap
+    (gData @m tok (StringData $ a <> b))
+    w
+  byNode $ gWrap (gToken @m p tok) w
 
-executeActor n args _ =
+executeActor w n args _ =
   error $ "invalid action " <> show n <> ": " <> show args

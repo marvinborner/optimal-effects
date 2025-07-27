@@ -3,6 +3,7 @@
 
 module Language.Generic.Node
   ( GenericNode(..)
+  , WrapType(..)
   ) where
 
 import           Data.Effects                   ( EffectData )
@@ -14,6 +15,9 @@ import qualified Data.Text                     as T
 import           Data.View
 import           GraphRewriting.Graph.Types
 import           GraphRewriting.Pattern.InteractionNet
+
+data WrapType = RecursiveNode | ImmediateNode
+  deriving Eq
 
 class (Eq n, INet n, View [Port] n) => GenericNode n where
   gInitiator   :: Port -> n
@@ -28,6 +32,7 @@ class (Eq n, INet n, View [Port] n) => GenericNode n where
   gRecursor    :: Port -> Lambda.Term -> n
   gData        :: Port -> EffectData -> n
   gFork        :: Lambda.ForkType -> Port -> Port -> Port -> Bool -> n
+  gWrap        :: n -> WrapType -> n
 
   gpp :: n -> Port
 
@@ -43,3 +48,5 @@ class (Eq n, INet n, View [Port] n) => GenericNode n where
   isRecursor :: n -> Bool
   isData :: n -> Bool
   isFork :: n -> Bool
+
+  isWrapType :: WrapType -> n -> Bool

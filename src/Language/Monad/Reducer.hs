@@ -71,9 +71,11 @@ layoutStep n = do
 visualize :: Bool -> Bool -> Bool -> Graph NodeMS -> IO ()
 visualize _ _ _ term = do
   (_, _) <- UI.initialise
-  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeMS) term
+  let hypergraph = execGraph
+        (apply $ exhaustive $ compileShare @NodeMS ImmediateNode)
+        term
   let layoutGraph = Layout.wrapGraph hypergraph
-  UI.run 50 id layoutStep layoutGraph $ ruleTree @NodeMS
+  UI.run 50 id layoutStep layoutGraph $ ruleTree @NodeMS ImmediateNode
 
 -- from LambdaScope/GraphRewriting
 incIndex :: Int -> [Int] -> [Int]
@@ -84,18 +86,20 @@ incIndex n []       = 0 : incIndex (n - 1) []
 
 count :: Bool -> Bool -> Bool -> Graph NodeMS -> IO ()
 count _ _ _ term = do
-  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeMS) term
+  let hypergraph =
+        execGraph (apply $ exhaustive $ compileShare @NodeMS ImmediateNode) term
   let layoutGraph = Layout.wrapGraph hypergraph
-  UI.iterations layoutStep layoutGraph $ ruleTree @NodeMS
+  UI.iterations layoutStep layoutGraph $ ruleTree @NodeMS ImmediateNode
 
 -- from LambdaScope/GraphRewriting
 bench :: Bool -> Bool -> Bool -> Graph NodeMS -> IO ()
 bench _ random parallel term = do
-  let hypergraph = execGraph (apply $ exhaustive $ compileShare @NodeMS) term
+  let hypergraph =
+        execGraph (apply $ exhaustive $ compileShare @NodeMS ImmediateNode) term
   rng <- newStdGen
   let func | random    = benchmarkRandom rng
            | otherwise = benchmark
-  let tree = ruleTree @NodeMS
+  let tree = ruleTree @NodeMS ImmediateNode
   let rules | parallel  = func (exhaustive <$> toList tree)
             | otherwise = func $ toList tree
   let indices    = evalGraph rules (Control.wrapGraph hypergraph)
@@ -107,27 +111,28 @@ bench _ random parallel term = do
 ruleTree
   :: forall m n
    . (GenericNode m, View NodeMS n, View [Port] n, View m n)
-  => LabelledTree (Rule n)
-ruleTree = Branch
+  => WrapType
+  -> LabelledTree (Rule n)
+ruleTree w = Branch
   "All"
-  [ Leaf "Duplicate" $ duplicate @m
-  , Leaf "Annihilate" $ annihilate @m
-  , Leaf "Erase" $ eraser @m
+  [ Leaf "Duplicate" $ duplicate @m w
+  , Leaf "Annihilate" $ annihilate @m w
+  , Leaf "Erase" $ eraser @m w
   , Branch
     "Token"
-    [ Leaf "Rotate Bind" rotateBind
-    , Leaf "Pop Unit"    popUnit
-    , Leaf "Pop Bind"    popBind
+    [ Leaf "Rotate Bind" $ rotateBind w
+    , Leaf "Pop Unit" $ popUnit w
+    , Leaf "Pop Bind" $ popBind w
     ]
   , Branch
     "Effectful"
-    [ Leaf "Apply Actor"                    applyActor
-    , Leaf "Apply Recursor"                 applyRecursor
-    , Leaf "Execute Conjunctive Fork"       execConjunctive
-    , Leaf "Execute Disjunctive Fork"       execDisjunctive
-    , Leaf "Return Conjunctive Fork"        returnConjunctive
-    , Leaf "Return Disjunctive Fork"        returnDisjunctive
-    , Leaf "Initialize Partial Application" initializeDataPartial
-    , Leaf "Apply Partially"                applyDataPartial
+    [ Leaf "Apply Actor" $ applyActor w
+    , Leaf "Apply Recursor" $ applyRecursor w
+    , Leaf "Execute Conjunctive Fork" $ execConjunctive w
+    , Leaf "Execute Disjunctive Fork" $ execDisjunctive w
+    , Leaf "Return Conjunctive Fork" $ returnConjunctive w
+    , Leaf "Return Disjunctive Fork" $ returnDisjunctive w
+    , Leaf "Initialize Partial Application" $ initializeDataPartial w
+    , Leaf "Apply Partially" $ applyDataPartial w
     ]
   ]

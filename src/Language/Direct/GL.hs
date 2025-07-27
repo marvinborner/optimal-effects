@@ -66,8 +66,8 @@ renderNode node = drawPorts node >> case node of
   -- Duplicator{}                          -> drawNodeBlack $ show $ level node
   Duplicator{}                          -> drawNodeBlack ""
   Redirector { direction = Top }        -> drawNode "α"
-  Redirector { direction = BottomRight } -> drawNode "αᴿ"
-  Redirector { direction = BottomLeft } -> drawNode "αᴸ"
+  Redirector { direction = BottomRight } -> drawNode "αᵣ"
+  Redirector { direction = BottomLeft } -> drawNode "αₗ"
   Actor { name = n, arity = a }         -> drawNode $ T.unpack n <> show a
   ActorC { name = n, arity = a } -> drawNode $ T.unpack n <> show a <> "ᶜ"
   Recursor{}                            -> drawNode "REC"
@@ -80,6 +80,8 @@ renderNode node = drawPorts node >> case node of
   Fork { tpe = Disjunctive }            -> drawNode "∨"
   Multiplexer{}                         -> drawNodeCircle "M"
   Wrap { node = n }                     -> renderNode n
+  -- Wrap { kind = ImmediateNode }         -> drawNode "I"
+  -- Wrap { kind = RecursiveNode }         -> drawNode "R"
 
 drawPorts :: NodeDS -> IO ()
 drawPorts n = sequence_

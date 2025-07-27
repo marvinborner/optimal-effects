@@ -123,6 +123,13 @@ r1 >>> r2 = do
   rw1 <- r1
   return $ rw1 >> apply r2
 
+(>&>) :: Rule n -> Rule n -> Rule n
+r1 >&> r2 = do
+  return $ apply r1
+  return $ apply r2
+  -- rw1 <- r1
+  -- return $ rw1 >> apply r2
+
 -- | Make a rule exhaustive, i.e. such that (when applied) it reduces redexes until no redexes are occur in the graph.
 exhaustive :: Rule n -> Rule n
 exhaustive = foldr1 (>>>) . repeat
