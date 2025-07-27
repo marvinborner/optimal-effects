@@ -1,11 +1,10 @@
 let repl = do (
+  _ <- print "Enter two numbers!"
   x <- readInt <>
-  _ <- writeInt x
   y <- readInt <>
-  _ <- writeInt y
   _ <- writeInt (add x y !)
-  rec <- repl
-  rec
+  r <- repl
+  r
 )
 
 repl

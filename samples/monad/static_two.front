@@ -1,0 +1,7 @@
+staticTwo = do ( return 2 )
+do (
+	a <- readInt <>
+	b <- staticTwo
+	res <- add a b
+	writeInt res
+)

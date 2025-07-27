@@ -1,9 +1,8 @@
 let repl = (
+  print "Enter two numbers!"
   let x = readInt <>
-  writeInt x
   let y = readInt <>
-  writeInt y
-  writeInt (add x y !)
+  writeInt (add x y)
   repl
 )
 
