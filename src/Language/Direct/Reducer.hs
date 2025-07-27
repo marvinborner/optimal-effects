@@ -119,7 +119,6 @@ ruleTree dir = Branch
   [ Leaf "Duplicate" $ duplicate @m
   , Leaf "Annihilate" $ annihilate @m
   , Leaf "Erase" $ eraser @m
-  , Leaf "Multiplexer" $ compileShare @m
   , Branch
     "Token"
     [ Leaf "Redirect Token"         redirectToken

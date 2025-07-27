@@ -113,7 +113,6 @@ ruleTree = Branch
   [ Leaf "Duplicate" $ duplicate @m
   , Leaf "Annihilate" $ annihilate @m
   , Leaf "Erase" $ eraser @m
-  , Leaf "Multiplexer" $ compileShare @m
   , Branch
     "Token"
     [ Leaf "Rotate Bind" rotateBind

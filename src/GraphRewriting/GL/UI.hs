@@ -25,6 +25,7 @@ module GraphRewriting.GL.UI
 import           Control.Monad
 import           Data.IORef
 import           Data.List                      ( mapAccumL )
+import           Data.Maybe
 import           Data.Set                      as Set
 import           GraphRewriting.GL.Canvas
 import           GraphRewriting.GL.Global
@@ -121,13 +122,19 @@ iterations layoutStep g rules = do
     }
 
   let
-    loop i prev = do
+    loop intCnts = do
       applyLeafRules id 0 globalVars
       ruleTree <- getRules <$> readIORef globalVars
-      let out = showRuleTree ruleTree
-      if out == prev then return (i, out) else putStrLn out >> loop (i + 1) out
+      let nints = sum $ fmap fst ruleTree
+      if nints == head intCnts then return intCnts else loop (nints : intCnts)
 
-  (iter, tree) <- loop (-1) ""
-  putStrLn tree
-  print iter
+  intCnts <- reverse <$> loop [0]
+  let intDiffs = zipWith (-) (tail intCnts) intCnts
+
+  ruleTree <- getRules <$> readIORef globalVars
+  putStrLn $ showRuleTree ruleTree
+  putStrLn $ "Iterations: " <> show (length intCnts)
+  putStrLn $ "Per Iteration: " <> show intCnts
+  putStrLn $ "Diffs Per Iteration: " <> show intDiffs
+  putStrLn $ "Plot data: " <> show (zip [0 ..] intDiffs)
   return ()

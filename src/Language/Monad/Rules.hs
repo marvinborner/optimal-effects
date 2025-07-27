@@ -21,6 +21,7 @@ import           GraphRewriting.Pattern.InteractionNet
 import           GraphRewriting.Rule
 import           Language.Generic.Effects
 import           Language.Generic.Node
+import           Language.Generic.Rules
 import           Language.Lambda.Transformer.Monad
                                                 ( executeRecursor )
 
@@ -121,9 +122,8 @@ applyActor = do
   (Token { out = p, inp = i }) :-: (Actor { name = n, args = a, arity = 0 }) <-
     activePair
   executeActor @NodeMS n a p
-  -- exhaustive compileShare -- TODO!
 
 applyRecursor :: (View [Port] n, View NodeMS n) => Rule n
 applyRecursor = do
   (Token { out = p, inp = i }) :-: (Recursor { boxed = t }) <- activePair
-  executeRecursor t p
+  executeRecursor t p >>> exhaustive (compileShare @NodeMS)
