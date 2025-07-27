@@ -21,18 +21,19 @@ instance PortSpec NodeDS where
   portSpec node =
     let sd = sameDir
     in  case node of
-          Initiator{}   -> [sd s]
-          Abstractor{}  -> triangle
-          Eraser{}      -> [sd n]
-          Duplicator{}  -> triangle
-          Redirector{}  -> triangle
-          Actor{}       -> [sd n]
-          ActorC{}      -> [sd n, sd s]
-          Recursor{}    -> [sd n]
-          Token{}       -> [sd n, sd s]
-          Data{}        -> [sd n]
-          Fork{}        -> triangle
-          Multiplexer{} -> [sd n, sd s]
+          Initiator{}       -> [sd s]
+          Abstractor{}      -> triangle
+          Eraser{}          -> [sd n]
+          Duplicator{}      -> triangle
+          Redirector{}      -> triangle
+          Actor{}           -> [sd n]
+          ActorC{}          -> [sd n, sd s]
+          Recursor{}        -> [sd n]
+          Token{}           -> [sd n, sd s]
+          Data{}            -> [sd n]
+          Fork{}            -> triangle
+          Multiplexer{}     -> [sd n, sd s]
+          Wrap { node = n } -> portSpec n
    where
     n = Vector2 0 1
     e = Vector2 1 0
@@ -78,6 +79,7 @@ renderNode node = drawPorts node >> case node of
   Fork { tpe = Conjunctive }            -> drawNode "∧"
   Fork { tpe = Disjunctive }            -> drawNode "∨"
   Multiplexer{}                         -> drawNodeCircle "M"
+  Wrap { node = n }                     -> renderNode n
 
 drawPorts :: NodeDS -> IO ()
 drawPorts n = sequence_

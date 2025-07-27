@@ -7,6 +7,7 @@
 module Data.Direct
   ( NodeDS(..)
   , AppDir(..)
+  , WrapType(..)
   , pp
   ) where
 
@@ -26,6 +27,8 @@ import           Language.Generic.Node
 
 data AppDir = Top | BottomLeft | BottomRight
 
+data WrapType = RecursiveNode | ImmediateNode
+
 -- | The signature of our graph
 data NodeDS
         = Initiator   {out :: Port}
@@ -40,12 +43,14 @@ data NodeDS
         | Data        {inp :: Port, dat :: EffectData} -- TODO: custom eraser interaction?
         | Fork        {tpe :: Lambda.ForkType, inp, lhs, rhs :: Port, exec :: Bool}
         | Redirector  {portA, portB, portC :: Port, direction :: AppDir}
+        | Wrap        {node :: NodeDS, kind :: WrapType}
 
 instance Eq NodeDS where
   Eraser{}                  == Eraser{}                       = True
   Token{}                   == Token{}                        = True -- for async actions
   Abstractor{}              == Redirector { direction = Top } = True -- both CON in SIC!
   Duplicator { level = l1 } == Duplicator { level = l2 }      = l1 == l2
+  Wrap { node = n1 }        == Wrap { node = n2 }             = n1 == n2
   _                         == _                              = False
 
 instance View [Port] NodeDS where
@@ -62,6 +67,7 @@ instance View [Port] NodeDS where
     Token { inp = i, out = o }                     -> [i, o]
     Data { inp = i }                               -> [i]
     Fork { inp = i, lhs = l, rhs = r }             -> [i, l, r]
+    Wrap { node = n }                              -> inspect n
   update ports node = case node of
     Initiator{}  -> node { out = o } where [o] = ports
     Abstractor{} -> node { inp = i, body = b, var = v }
@@ -75,9 +81,10 @@ instance View [Port] NodeDS where
     Recursor{}    -> node { inp = i } where [i] = ports
     Redirector{}  -> node { portA = a, portB = b, portC = c }
       where [a, b, c] = ports
-    Token{} -> node { inp = i, out = o } where [i, o] = ports
-    Data{}  -> node { inp = i } where [i] = ports
-    Fork{}  -> node { inp = i, lhs = l, rhs = r } where [i, l, r] = ports
+    Token{}           -> node { inp = i, out = o } where [i, o] = ports
+    Data{}            -> node { inp = i } where [i] = ports
+    Fork{} -> node { inp = i, lhs = l, rhs = r } where [i, l, r] = ports
+    Wrap { node = n } -> update ports n
 
 instance INet NodeDS where
   principalPort = pp
@@ -100,6 +107,7 @@ pp node = case node of
   Data { inp = i }                             -> i
   Fork { inp = i, exec = False }               -> i
   Fork { lhs = l, exec = True }                -> l -- rhs implicit
+  Wrap { node = n }                            -> pp n
 
 instance LeftmostOutermost NodeDS where
   lmoPort = lmo
@@ -119,6 +127,7 @@ lmo node = case node of
   Redirector { portC = c, direction = BottomLeft } -> Just c
   Token { out = i }                            -> Just i
   Data { inp = i }                             -> Nothing -- ?
+  Wrap { node = n }                            -> lmo n
   -- Constant { inp = i, args = as }              -> Nothing
   -- Delimiter { inp = i, out = o }               -> Just i
   -- Case { inp = i, out = o, alts = as }         -> Just o

@@ -120,6 +120,10 @@ executeRecursor
   :: (View [Port] n, View NodeDS n) => AppDir -> L.Term -> Port -> Rule n
 executeRecursor dir boxed o = replace $ do
   tok                    <- byEdge
-  (Context { port = p }) <- compile dir byNode byEdge byWire boxed
+  (Context { port = p }) <- compile dir
+                                    (byNode . flip Wrap RecursiveNode)
+                                    byEdge
+                                    byWire
+                                    boxed
   byWire p tok
   byNode Token { inp = o, out = tok }

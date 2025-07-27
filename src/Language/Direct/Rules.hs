@@ -1,6 +1,6 @@
 -- Copyright (c) 2025, Marvin Borner
 
-{-# LANGUAGE TypeApplications, FlexibleContexts, ScopedTypeVariables, FlexibleInstances #-}
+{-# LANGUAGE TypeApplications, FlexibleContexts, ScopedTypeVariables, FlexibleInstances, AllowAmbiguousTypes #-}
 module Language.Direct.Rules where
 
 import           Control.Applicative            ( optional )
@@ -37,9 +37,9 @@ reflectsToken Actor { arity = a } = a > 0
 reflectsToken Data{}              = True
 reflectsToken _                   = False
 
-reflectToken :: (View [Port] n, View NodeDS n) => Rule n
-reflectToken = do
-  reflector :-: tok@(Token { inp = iT, out = oT }) <- activePair
+reflectToken :: (View [Port] n, View NodeDS n) => WrapType -> Rule n
+reflectToken w = do
+  reflector :-: tok@(Wrap (Token { inp = iT, out = oT }) w) <- activePair
   guard $ reflectsToken reflector
   replace $ do
     byNode $ reflector { inp = iT }
@@ -175,7 +175,36 @@ applyActor = do
     activePair
   executeActor @NodeDS n a p
 
+recursiveRules
+  :: forall m n
+   . (GenericNode m, View NodeDS n, View [Port] n, View m n)
+  => WrapType
+  -> [Rule n]
+recursiveRules w =
+  [ duplicate w @m
+  , annihilate w @m
+  , eraser w @m
+  , compileShare w @m
+  , redirectToken w
+  , reflectToken w
+  , inferLeftEffectful w
+  , inferTopEffectful w
+  , inferLeftUneffectful w
+  -- , applyActor w
+  -- , applyRecursor w dir
+  , execConjunctive w
+  , execDisjunctive w
+  , returnConjunctive w
+  , returnDisjunctive w
+  , initializeDataPartial w
+  , applyDataPartial w
+  ]
+
 applyRecursor :: (View [Port] n, View NodeDS n) => AppDir -> Rule n
 applyRecursor dir = do
   (Token { out = p, inp = i }) :-: (Recursor { boxed = t }) <- activePair
-  executeRecursor dir t p >>> exhaustive (compileShare @NodeDS)
+  foldl1
+    (>>>)
+    ( executeRecursor dir t p
+    : (map exhaustive (recursiveRules RecursiveNode @NodeDS))
+    )
