@@ -22,6 +22,7 @@ builtinActions =
   , "mul"
   , "div"
   , "mod"
+  , "pow"
   , "download"
   , "evalLang"
   , "concat"
@@ -44,6 +45,7 @@ actionArity "sub"        = 2
 actionArity "mul"        = 2
 actionArity "div"        = 2
 actionArity "mod"        = 2
+actionArity "pow"        = 2
 actionArity "download"   = 2
 actionArity "evalLang"   = 3
 actionArity "concat"     = 2

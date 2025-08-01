@@ -10,8 +10,7 @@ import           Control.Monad                  ( void )
 import           Data.Effects                   ( actionArity
                                                 , builtinActions
                                                 )
-import           Data.Front                     ( Action(..)
-                                                , ForkType(..)
+import           Data.Front                     ( ForkType(..)
                                                 , Identifier
                                                 , Term(..)
                                                 )
@@ -102,26 +101,25 @@ fork = do
 -- | do action: bind | unit
 -- | bind: <identifier> <- <term>
 -- | unit: <term>
-doAction :: Parser Action
-doAction = try bind <|> try unit <|> prim
+doAction :: Parser Term
+doAction = try bind <|> try unit
  where
   bind = do
     name <- lexeme identifier
     _    <- symbol "<-"
     t    <- lexemeN term
-    next <- doAction
+    next <- lexemeN term
     return $ Bind name t next
   unit = do
     _ <- symbol "return"
     t <- lexeme term
     return $ Unit t
-  prim = Prim <$> lexemeN term
 
 -- | do block: do ( <doAction>+ )
 doBlock :: Parser Term
 doBlock = do
   _      <- lexeme "do "
-  action <- lexeme $ parens $ doAction -- TODO
+  action <- lexeme $ parens $ term
   return $ Do action
 
 -- | single decimal number
@@ -161,6 +159,7 @@ singleton =
     <|> ifElseSync
     <|> fork
     <|> doBlock
+    <|> try doAction
     <|> deBruijn
     <|> stringt
     <|> number

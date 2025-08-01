@@ -88,7 +88,7 @@ library
 
   build-depends:
       AC-Vector >=2.4.0
-    , base >=4.9 && <5
+    , base >=4.19 && <5
     , minitypeset-opengl
     , base-unicode-symbols >=0.2 && <0.3
     , containers >=0.3 && <0.7

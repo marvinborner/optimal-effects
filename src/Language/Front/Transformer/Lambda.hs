@@ -18,7 +18,7 @@ import           Debug.Trace
 
 data Context = Context
   { stk :: [Identifier]
-  , clo :: [L.Term]
+  , clo :: [(L.Term, Bool)]
   }
 
 -- | Transformation monad
@@ -38,17 +38,17 @@ isRecursive n = \case
     isRecursive n clause || isRecursive n true || isRecursive n false
   Var n' | n == n'   -> True
          | otherwise -> False
-  App a b      -> isRecursive n a || isRecursive n b
-  UnitV        -> False
-  Num _        -> False
-  Str _        -> False
-  Act _ _      -> False
-  Token        -> False
-  Idx _        -> False -- hmm
-  Do  (Prim t) -> isRecursive n t
-  Do  (Unit t) -> isRecursive n t
-  Do (Bind n' t a) | n == n'   -> isRecursive n t
-                   | otherwise -> isRecursive n t || isRecursive n (Do a)
+  App a b -> isRecursive n a || isRecursive n b
+  UnitV   -> False
+  Num _   -> False
+  Str _   -> False
+  Act _ _ -> False
+  Token   -> False
+  Idx  _  -> False -- hmm
+  Unit t  -> isRecursive n t
+  Bind n' t a | n == n'   -> isRecursive n t
+              | otherwise -> isRecursive n t || isRecursive n (Do a)
+  Do t       -> isRecursive n t
   Fork _ a b -> isRecursive n a || isRecursive n b
   e          -> error $ show e
 
@@ -57,9 +57,15 @@ wrap :: Int -> L.Term -> L.Term
 wrap 0 t = t
 wrap n t = L.lam $ wrap (n - 1) t
 
-unwrapClosure :: [L.Term] -> L.Term -> L.Term
-unwrapClosure []      term = term
-unwrapClosure (t : c) term = L.app (L.lam $ unwrapClosure c term) t
+-- | Unwrap closure on a term via applications
+-- | The boolean specifies whether a term "is a definition" which receives arguments
+-- | Future work should decode non-definitions to global references TODO
+unwrapClosure :: [(L.Term, Bool)] -> L.Term -> L.Term
+unwrapClosure []              term = term
+unwrapClosure ((t, True) : c) term = L.app (L.lam $ unwrapClosure c term) t
+unwrapClosure ((t, False) : c) term =
+  L.app (L.lam $ unwrapClosure c term) (L.dat UnitData)
+  -- L.app (L.lam $ unwrapClosure c term) (L.lam (shift 1 t))
 
 shift :: Int -> L.Term -> L.Term
 shift n = go 0
@@ -77,9 +83,10 @@ transform = \case
       ctx@(Context { stk = s, clo = c }) <- get
       put $ ctx { stk = reverse (n : params) ++ s }
       b <- transform body
-      let wrapped = wrap (length params) b -- +1 by L.rec
-      let rec     = L.rec wrapped $ unwrapClosure (reverse c) rec
-      put $ ctx { stk = n : s, clo = rec : c }
+      let wrapped      = wrap (length params) b -- +1 by L.rec
+      let rec          = L.rec wrapped $ unwrapClosure (reverse c) rec
+      let isDefinition = not $ null params
+      put $ ctx { stk = n : s, clo = (rec, isDefinition) : c }
       d <- transform next
       put $ ctx { stk = s, clo = c }
       return $ L.app (L.lam d) rec
@@ -87,8 +94,9 @@ transform = \case
       ctx@(Context { stk = s, clo = c }) <- get
       put $ ctx { stk = reverse params ++ s }
       b <- transform body
-      let wrapped = wrap (length params) b
-      put $ ctx { stk = n : s, clo = wrapped : c }
+      let wrapped      = wrap (length params) b
+      let isDefinition = not $ null params
+      put $ ctx { stk = n : s, clo = (wrapped, isDefinition) : c }
       d <- transform next
       put $ ctx { stk = s, clo = c }
       return $ L.app (L.lam d) wrapped
@@ -129,19 +137,19 @@ transform = \case
   Fork Disjunctive a b -> L.frk L.Disjunctive <$> transform a <*> transform b
 
   -- TODO: rec closure?
-  Do (Bind v t n)      -> do
+  Bind v           t n -> do
     ctx@(Context { stk = s }) <- get
     t'                        <- transform t
     put $ ctx { stk = v : s }
     n' <- transform (Do n)
     put $ ctx { stk = s }
     return $ L.bnd t' (L.lam n')
-  Do (Unit t) -> do
+  Unit t -> do
     t' <- transform t
     return $ L.eta t'
-  Do (Prim t) -> transform t
+  Do t -> transform t
 
-  t           -> error $ show t
+  t    -> error $ show t
 
 transformLambda :: Term -> Either String L.Term
 transformLambda t =

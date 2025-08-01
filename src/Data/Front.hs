@@ -2,7 +2,6 @@
 
 module Data.Front
   ( Term(..)
-  , Action(..)
   , ForkType(..)
   , Identifier
   ) where
@@ -13,14 +12,7 @@ import qualified Data.Text                     as T
 
 type Identifier = Text
 
-data Action = Unit Term | Prim Term | Bind Identifier Term Action
-
 data ForkType = Conjunctive | Disjunctive
-
-instance Show Action where
-  show (Unit t    ) = "(return " <> show t <> ")"
-  show (Prim t    ) = show t
-  show (Bind n t a) = show n <> " <- " <> show t <> "; " <> show a
 
 -- we parse singleton expression as `Def _ [] e next`!
 data Term = Def Identifier [Identifier] Term Term
@@ -35,7 +27,9 @@ data Term = Def Identifier [Identifier] Term Term
           | Str String
           | UnitV
           | Act Identifier Int
-          | Do Action
+          | Do Term
+          | Unit Term
+          | Bind Identifier Term Term
           | Token
 
 instance Show Term where
@@ -60,5 +54,7 @@ instance Show Term where
   show (Str s               ) = show s
   show (UnitV               ) = "<>"
   show (Act n _             ) = T.unpack n
-  show (Do as               ) = "do (" <> show as <> ")"
+  show (Do   as             ) = "do (" <> show as <> ")"
+  show (Unit t              ) = "(return " <> show t <> ")"
+  show (Bind n t a          ) = show n <> " <- " <> show t <> "; " <> show a
   show Token                  = "!"

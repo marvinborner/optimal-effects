@@ -94,10 +94,10 @@ returnConjunctive :: (View [Port] n, View NodeDS n) => WrapType -> Rule n
 returnConjunctive w = do
   Wrap (Fork { tpe = Conjunctive, inp = i1, lhs = l1, rhs = r1, exec = True }) w1 :-: Wrap tok1@(Token { inp = iT1, out = oT1 }) w2 <-
     activePair
-  require $ w1 == w && w2 == w
-  (Token { inp = iT2, out = oT2 }) <- nodeWith r1
-  (Fork { tpe = Conjunctive, inp = i2, lhs = l2, rhs = r2, exec = True }) <-
+  (Wrap (Token { inp = iT2, out = oT2 }) w3) <- nodeWith r1
+  (Wrap (Fork { tpe = Conjunctive, inp = i2, lhs = l2, rhs = r2, exec = True }) w4) <-
     nodeWith iT2
+  require $ w1 == w && w2 == w && w3 == w && w4 == w
   require $ oT1 /= oT2 && i1 == i2 && l1 == l2 && r1 == r2 -- same fork, different tokens
 
   replace $ do

@@ -81,8 +81,8 @@ returnConjunctive :: (View [Port] n, View NodeMS n) => WrapType -> Rule n
 returnConjunctive w = do
   Wrap (Fork { tpe = Conjunctive, inp = i1, lhs = l1, rhs = r1, exec = True }) w1 :-: Wrap tok1@(Token { inp = iT1, out = oT1 }) w2 <-
     activePair
-  Wrap (Token { inp = iT2, out = oT2 }) w3 <- nodeWith r1
-  Wrap (Fork { tpe = Conjunctive, inp = i2, lhs = l2, rhs = r2, exec = True }) w4 <-
+  (Wrap (Token { inp = iT2, out = oT2 }) w3) <- nodeWith r1
+  (Wrap (Fork { tpe = Conjunctive, inp = i2, lhs = l2, rhs = r2, exec = True }) w4) <-
     nodeWith iT2
   require $ w1 == w && w2 == w && w3 == w && w4 == w
   require $ oT1 /= oT2 && i1 == i2 && l1 == l2 && r1 == r2 -- same fork, different tokens
@@ -94,17 +94,12 @@ returnConjunctive w = do
 
 returnDisjunctive :: (View [Port] n, View NodeMS n) => WrapType -> Rule n
 returnDisjunctive w = do
-  Wrap fork@(Fork { tpe = Disjunctive, inp = i, exec = True }) w1 :-: Wrap tok@(Token { inp = iT, out = oT }) w2 <-
+  Wrap (Fork { tpe = Disjunctive, inp = i, exec = True }) w1 :-: Wrap tok@(Token { inp = iT, out = oT }) w2 <-
     activePair
   require $ w1 == w && w2 == w
-  -- forkNode <- liftReader . pure . head . tail =<< history
-  -- attached <- liftReader . flip adverseNodes iT =<< previous -- fork + other token
-  -- let [otherThread] = filter (/= forkNode) attached -- must always be 1 by construction
-  -- otherThreadInput <- last <$> liftReader (attachedEdges otherThread) -- very hacky
   replace $ do
     byNode $ Wrap tok { inp = i, out = oT } w2
     byNode $ Wrap Eraser { inp = iT } w
-    -- byNode Eraser { inp = otherThreadInput }
 
 initializeDataPartial :: (View [Port] n, View NodeMS n) => WrapType -> Rule n
 initializeDataPartial w = do
@@ -172,3 +167,7 @@ applyRecursor w = do
     >>> exhaustive (foldl1 (<|>) (prereduceRules @NodeMS RecursiveNode))
     )
     >>> exhaustive (rewrap RecursiveNode ImmediateNode)
+
+  -- | disable pre-reduction
+  -- (executeRecursor t p >>> exhaustive (compileShare @NodeMS RecursiveNode))
+  --   >>> exhaustive (rewrap RecursiveNode ImmediateNode)

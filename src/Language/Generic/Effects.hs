@@ -73,6 +73,7 @@ evalLang "r" func arg =
   evalProcess "Rscript" ["-e", "cat(" <> func <> "(" <> show arg <> "))"]
 
 -- TODO: allow IO via monad
+{-# NOINLINE executeActor #-}
 executeActor
   :: forall m n
    . (GenericNode m, View [Port] n, View m n)
@@ -178,6 +179,13 @@ executeActor w "mod" [NumberData b, NumberData a] p = replace $ do
   tok <- byEdge -- send token back!
   trace ("mod: " <> show a <> " " <> show b) $ byNode $ gWrap
     (gData @m tok (NumberData $ a `mod` b))
+    w
+  byNode $ gWrap (gToken @m p tok) w
+
+executeActor w "pow" [NumberData b, NumberData a] p = replace $ do
+  tok <- byEdge -- send token back!
+  trace ("pow: " <> show a <> " " <> show b) $ byNode $ gWrap
+    (gData @m tok (NumberData $ a ^ b))
     w
   byNode $ gWrap (gToken @m p tok) w
 

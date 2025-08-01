@@ -82,9 +82,9 @@ renderNode node = drawPorts node >> case node of
   Multiplexer{}                  -> drawNodeCircle "M"
   BindN{}                        -> drawNode "≫="
   UnitN{}                        -> drawNode "η"
-  -- Wrap { node = n }              -> renderNode n
-  Wrap { kind = ImmediateNode }  -> drawNode "I"
-  Wrap { kind = RecursiveNode }  -> drawNode "R"
+  Wrap { node = n }              -> renderNode n
+  -- Wrap { kind = ImmediateNode }  -> drawNode "I"
+  -- Wrap { kind = RecursiveNode }  -> drawNode "R"
 
 drawPorts :: NodeMS -> IO ()
 drawPorts n = sequence_
