@@ -1,14 +1,13 @@
-All 741
+All 615
   Duplicate 21
   Annihilate 64
   Erase 46
-  Multiplexer 72
-  Token 393
+  Token 339
     Redirect Token 165
     Reflect Token 78
     Infer Left Effectful 15
     Infer Top Effectful 42
-    Infer Left Uneffectful 93
+    Infer Left Uneffectful 39
   Effectful 145
     Apply Actor 27
     Apply Recursor 6

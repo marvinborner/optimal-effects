@@ -9,20 +9,20 @@ let mapM_ f lst = lst [[[[mapM_ f $2] (f $2)]]] <>
 
 let list = [$0 1 [$0 2 [$0 3 [$0 4 [$0 5 nil]]]]]
 let f x = (
-	writeInt (readInt <>)
-	x
+  writeInt (readInt <>)
+  x
 )
 
 -- infinite list
 -- infinite = (
--- 	go x = [$0 x (go (succ x))]
--- 	go
+--   go x = [$0 x (go (succ x))]
+--   go
 -- ) 0
 
 let mapM f lst = lst [[[
-	let y = f $2
-	let ys = mapM f $2
-	cons y ys
+  let y = f $2
+  ys = mapM f $2
+  cons y ys
 ]]] nil
 
 writeInt (fold add 0 (mapM f list))

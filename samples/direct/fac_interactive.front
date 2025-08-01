@@ -1,0 +1,10 @@
+print "Enter your number!"
+let x = readInt <>
+
+let fac n = (
+  writeInt n
+  if (isEqual 0 n) then 1
+  else (mul n (fac (pred n)))
+)
+
+writeInt (fac 10)

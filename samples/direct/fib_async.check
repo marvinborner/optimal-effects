@@ -1,20 +1,19 @@
-All 827
-  Duplicate 36
+All 595
+  Duplicate 28
   Annihilate 118
   Erase 94
-  Multiplexer 112
-  Token 256
+  Token 176
     Redirect Token 51
     Reflect Token 22
     Infer Left Effectful 19
     Infer Top Effectful 18
-    Infer Left Uneffectful 146
-  Effectful 211
+    Infer Left Uneffectful 66
+  Effectful 179
     Apply Actor 41
     Apply Recursor 8
     Execute Conjunctive Fork 0
     Execute Disjunctive Fork 0
     Return Conjunctive Fork 0
     Return Disjunctive Fork 0
-    Initialize Partial Application 81
-    Apply Partially 81
+    Initialize Partial Application 65
+    Apply Partially 65

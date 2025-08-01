@@ -8,7 +8,7 @@ let f x = do (
 do (
 	-- a >>= f
 	res1 <- do (
-		x <- do (return a)
+		x <- return a
 		f x
 	)
 

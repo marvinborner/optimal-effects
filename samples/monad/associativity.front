@@ -1,4 +1,4 @@
-let m = do (return 10)
+let m = return 10
 
 -- duplicating & printing p here requires bookkeeping!
 let f p = do (

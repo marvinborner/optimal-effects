@@ -1,0 +1,7 @@
+22:16:
+   |
+22 | let mapM f lst = lst [[[
+   |                ^
+unexpected '='
+expecting "<>", "add", "concat", "div", "do ", "download", "evalLang", "if ", "if! ", "isEqual", "isGreater", "isLess", "isNotEqual", "join", "let ", "mod", "mul", "pow", "pred", "print", "race", "readFile", "readInt", "return", "sub", "succ", "writeFile", "writeInt", '!', '"', '$', '(', '[', '_', alphanumeric character, end of input, integer, or uppercase letter
+
