@@ -1,0 +1,7 @@
+let collatz i n =
+  if (isEqual 1 n) then i
+  else (collatz (succ i) (if (isEqual 0 (mod n 2))
+    then (div n 2)
+    else (succ (mul 3 n))))
+
+writeInt (collatz 0 24)

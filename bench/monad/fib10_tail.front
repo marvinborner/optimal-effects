@@ -1,0 +1,16 @@
+let fib n a b = do (
+  eq <- isEqual 0 n
+  if (eq)
+    then return b
+    else do (
+      s <- add a b
+      p <- pred n
+      f <- fib
+      f p s a
+    )
+)
+
+do (
+  r <- fib 10 1 0
+  writeInt r
+)

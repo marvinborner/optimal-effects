@@ -1,0 +1,9 @@
+let id x = x
+
+let fib n a b = (
+  if! (isEqual 0 n !)
+    then [b]
+    else [($0 fib !) (pred n !) (add a b !) a]
+) id
+
+writeInt (fib 10 1 0)

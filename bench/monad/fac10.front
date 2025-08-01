@@ -1,0 +1,16 @@
+let fac n = do (
+  gr <- isGreater n 1
+  if (gr)
+    then do (
+      p <- pred n
+      f <- fac
+      r <- f p
+      mul n r
+    )
+    else return 1
+)
+
+do (
+  r <- fac 10
+  writeInt r
+)

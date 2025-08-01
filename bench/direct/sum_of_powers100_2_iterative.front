@@ -1,0 +1,5 @@
+let sumOfPowers end k acc = if (isEqual end 0)
+  then acc
+  else (sumOfPowers (pred end) k (add acc (pow end k)))
+
+writeInt (sumOfPowers 100 2 0)

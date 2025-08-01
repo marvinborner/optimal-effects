@@ -1,0 +1,7 @@
+let fib n a b = (
+  if (isEqual 0 n)
+    then b
+    else (fib (pred n) (add a b) a)
+)
+
+writeInt (fib 20 1 0)

@@ -1,0 +1,7 @@
+let fac n acc = (
+  if (isGreater n 1)
+    then (fac (pred n) (mul n acc))
+    else acc
+)
+
+writeInt (fac 20 1)

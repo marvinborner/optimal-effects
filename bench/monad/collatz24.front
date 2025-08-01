@@ -1,0 +1,22 @@
+let collatz i n = do (
+  eq <- isEqual 1 n
+  if (eq) then return i
+  else do (
+    m <- mod n 2
+    eq <- isEqual 0 m
+    arg <- if (eq)
+      then (div n 2)
+      else do (
+        m <- mul 3 n
+        succ m
+      )
+    s <- succ i
+    f <- collatz
+    f s arg
+  )
+)
+
+do (
+  r <- collatz 0 24
+  writeInt r
+)

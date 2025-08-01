@@ -1,0 +1,10 @@
+let sumOfPowers start end k = if (isGreater start end)
+  then 0
+  else if (isEqual start end)
+    then (pow start k)
+    else (
+      let mid = div (add start end) 2
+      join (add (sumOfPowers start mid k)) (sumOfPowers (succ mid) end k)
+    )
+
+writeInt (sumOfPowers 1 10 2)
