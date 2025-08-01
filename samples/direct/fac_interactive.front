@@ -7,4 +7,4 @@ let fac n = (
   else (mul n (fac (pred n)))
 )
 
-writeInt (fac 10)
+writeInt (fac x)

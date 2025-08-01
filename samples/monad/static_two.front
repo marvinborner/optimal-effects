@@ -1,4 +1,4 @@
-staticTwo = do ( return 2 )
+let staticTwo = do ( return 2 )
 do (
 	a <- readInt <>
 	b <- staticTwo

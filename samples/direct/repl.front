@@ -1,9 +1,9 @@
-let repl = (
+let repl _ = (
   print "Enter two numbers!"
   let x = readInt <>
   let y = readInt <>
   writeInt (add x y)
-  repl
+  repl <>
 )
 
-repl
+repl <>
